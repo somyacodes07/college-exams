@@ -10,7 +10,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "db:seed": "node server/seed.cjs"
+    "db:seed": "node server/seed.cjs",
+    "db:sync-check": "node scripts/sync_check_update.cjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
