@@ -171,18 +171,40 @@ const authenticateToken = (req, res, next) => {
 
 // --- Database Connection ---
 
-const connectDB = async (req, res, next) => {
+// Global cached connection promise to reuse across serverless invocations and requests
+let cachedDbPromise = null;
+
+const connectToDatabase = () => {
   if (mongoose.connection.readyState >= 1) {
-    return next();
+    return Promise.resolve(mongoose.connection);
   }
-  try {
-    await mongoose.connect(MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000
+  if (!cachedDbPromise) {
+    console.log('Initiating MongoDB connection...');
+    cachedDbPromise = mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000,
+      maxPoolSize: 10,
+      minPoolSize: 1,
+      socketTimeoutMS: 45000,
+    }).then((m) => {
+      console.log('Successfully connected to MongoDB.');
+      return m.connection;
+    }).catch((err) => {
+      console.error('Failed to connect to MongoDB:', err);
+      cachedDbPromise = null; // Reset so subsequent requests can attempt reconnection
+      throw err;
     });
-    console.log('Successfully connected to MongoDB (Serverless).');
+  }
+  return cachedDbPromise;
+};
+
+// Eagerly connect in the background on startup
+connectToDatabase().catch(() => {});
+
+const connectDB = async (req, res, next) => {
+  try {
+    await connectToDatabase();
     next();
   } catch (err) {
-    console.error('MongoDB connection error:', err);
     res.status(500).json({ error: 'Database Connection Failed', details: err.message });
   }
 };

@@ -344,6 +344,7 @@ function parsePractical(csvText, students, markers = {}) {
     let subject = '';
     let professor = '';
     let panel = '';
+    let venue = '';
 
     const cleanHeader = header.replace(/\s+/g, ' ').trim();
     const match = cleanHeader.match(/^(Panel\s*\d+|Batch\s*\d+)(?:\s*\((.*?)\))?\s*-\s*(.*)$/i);
@@ -354,14 +355,19 @@ function parsePractical(csvText, students, markers = {}) {
     } else {
       const parts = cleanHeader.split(' - ');
       if (parts.length > 1) {
-        subject = parts.slice(1).join(' - ').trim();
-        panel = parts[0].trim();
+        subject = parts[0].trim();
+        const secondPart = parts.slice(1).join(' - ').trim();
+        if (/^(Panel|Batch)\s*\d+/i.test(secondPart)) {
+            panel = secondPart;
+        } else {
+            venue = secondPart;
+        }
       } else {
         subject = cleanHeader;
         panel = 'Unknown';
       }
     }
-    return { subject, panel, professor };
+    return { subject, panel, professor, venue };
   }
 
   for (let i = 0; i < lines.length; i++) {
@@ -408,6 +414,11 @@ function parsePractical(csvText, students, markers = {}) {
         if (idx >= 2 && cell) {
           const parsed = parsePanelHeader(cell);
           const panelName = tempPanels.get(idx) || parsed.panel || 'Unknown';
+          
+          if (parsed.venue) {
+            venueMap.set(idx, parsed.venue);
+          }
+
           subjectMap.set(idx, {
             subject: parsed.subject,
             panel: panelName,

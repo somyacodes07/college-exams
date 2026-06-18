@@ -33,7 +33,8 @@ async function seedDatabase() {
 
   // 3. Connect to MongoDB
   try {
-    console.log(`Connecting to MongoDB at: ${MONGODB_URI}`);
+    const obfuscatedUri = MONGODB_URI.substring(0, 15) + '...';
+    console.log(`Connecting to MongoDB at: ${obfuscatedUri}`);
     await mongoose.connect(MONGODB_URI);
     console.log('Connected to MongoDB successfully.');
   } catch (error) {
