@@ -171,33 +171,47 @@ const authenticateToken = (req, res, next) => {
 
 // --- Database Connection ---
 
-// Global cached connection promise to reuse across serverless invocations and requests
-let cachedDbPromise = null;
+// Global cached connection for serverless/Vercel environments
+let cached = global.mongoose;
 
-const connectToDatabase = () => {
-  if (mongoose.connection.readyState >= 1) {
-    return Promise.resolve(mongoose.connection);
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
+
+const connectToDatabase = async () => {
+  if (cached.conn && mongoose.connection.readyState === 1) {
+    return cached.conn;
   }
-  if (!cachedDbPromise) {
+
+  if (!cached.promise) {
     console.log('Initiating MongoDB connection...');
-    cachedDbPromise = mongoose.connect(MONGODB_URI, {
+    const opts = {
+      bufferCommands: false, // Fast fail instead of hanging
       serverSelectionTimeoutMS: 5000,
       maxPoolSize: 10,
       minPoolSize: 1,
       socketTimeoutMS: 45000,
-    }).then((m) => {
+      connectTimeoutMS: 10000,
+    };
+
+    cached.promise = mongoose.connect(MONGODB_URI, opts).then((m) => {
       console.log('Successfully connected to MongoDB.');
       return m.connection;
-    }).catch((err) => {
-      console.error('Failed to connect to MongoDB:', err);
-      cachedDbPromise = null; // Reset so subsequent requests can attempt reconnection
-      throw err;
     });
   }
-  return cachedDbPromise;
+
+  try {
+    cached.conn = await cached.promise;
+  } catch (err) {
+    console.error('Failed to connect to MongoDB:', err);
+    cached.promise = null; // Reset so subsequent requests can attempt reconnection
+    throw err;
+  }
+
+  return cached.conn;
 };
 
-// Eagerly connect in the background on startup
+// Eagerly connect in the background on startup (non-blocking)
 connectToDatabase().catch(() => {});
 
 const connectDB = async (req, res, next) => {
