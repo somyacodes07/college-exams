@@ -2,7 +2,7 @@
 
 A premium, modern web application for students to view their Theory and Practical exam schedules. Built with React, Vite, Tailwind CSS, Express, and MongoDB.
 
-**Created by [Somyajeet Singh](https://github.com/ssgamingop)**
+**Created by [Somyajeet Singh](https://github.com/somyacodes07)**
 
 **Deployed on Vercel [Exam-Scheduler](https://college-exams.vercel.app/)**
 
@@ -28,7 +28,7 @@ A premium, modern web application for students to view their Theory and Practica
 
 1.  **Clone the repository**:
     ```bash
-    git clone git@github.com:ssgamingop/college-exams.git
+    git clone git@github.com:somyacodes07/college-exams.git
     cd exam-scheduler
     ```
 

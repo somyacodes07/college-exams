@@ -77,7 +77,7 @@ function App() {
           >
             {theme === 'dark' ? <Sun size={18} className="sm:w-5 sm:h-5" /> : <Moon size={18} className="sm:w-5 sm:h-5" />}
           </motion.button>
-          <a href="https://github.com/ssgamingop" target="_blank" rel="noopener noreferrer" className="text-slate-500 dark:text-slate-400 hover:text-black dark:hover:text-white transition-colors">
+          <a href="https://github.com/somyacodes07" target="_blank" rel="noopener noreferrer" className="text-slate-500 dark:text-slate-400 hover:text-black dark:hover:text-white transition-colors">
             <Github size={18} className="sm:w-5 sm:h-5" />
           </a>
           <a href="https://instagram.com/somyajeet.op" target="_blank" rel="noopener noreferrer" className="text-slate-500 dark:text-slate-400 hover:text-pink-500 transition-colors">
