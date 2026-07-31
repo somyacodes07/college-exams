@@ -15,7 +15,6 @@ function App() {
   const [studentCount, setStudentCount] = useState(0);
   const [syncVersion, setSyncVersion] = useState(0);
   const [dbStatus, setDbStatus] = useState('connecting'); // connecting | online | offline
-  const [animatingRipple, setAnimatingRipple] = useState(null);
 
   const [theme, setTheme] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -48,65 +47,12 @@ function App() {
     fetchStats();
   }, [selectedStudent]);
 
-  // Guaranteed 100% Universal Circular Wipe Theme Animation Originating from Button Center
-  const toggleTheme = (e) => {
-    if (animatingRipple) return;
-
-    const nextTheme = theme === 'dark' ? 'light' : 'dark';
-
-    // Calculate EXACT geometric center of the theme toggle button element
-    const buttonRect = e?.currentTarget ? e.currentTarget.getBoundingClientRect() : null;
-    const x = buttonRect ? buttonRect.left + buttonRect.width / 2 : window.innerWidth / 2;
-    const y = buttonRect ? buttonRect.top + buttonRect.height / 2 : window.innerHeight / 2;
-
-    const endRadius = Math.hypot(
-      Math.max(x, window.innerWidth - x),
-      Math.max(y, window.innerHeight - y)
-    );
-
-    setAnimatingRipple({
-      x,
-      y,
-      endRadius,
-      targetTheme: nextTheme,
-    });
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 font-sans selection:bg-emerald-500/30 relative cyber-grid overflow-x-hidden">
-      {/* Universal 360-Degree Circular Theme Wipe Overlay */}
-      <AnimatePresence>
-        {animatingRipple && (
-          <motion.div
-            key="theme-circle-wipe"
-            initial={{
-              clipPath: `circle(0px at ${animatingRipple.x}px ${animatingRipple.y}px)`,
-            }}
-            animate={{
-              clipPath: `circle(${animatingRipple.endRadius}px at ${animatingRipple.x}px ${animatingRipple.y}px)`,
-            }}
-            transition={{
-              duration: 0.6,
-              ease: [0.22, 1, 0.36, 1], // Smooth quintic-out easing curve
-            }}
-            onAnimationComplete={() => {
-              setTheme(animatingRipple.targetTheme);
-              setAnimatingRipple(null);
-            }}
-            className={`fixed inset-0 z-[99999] pointer-events-none ${
-              animatingRipple.targetTheme === 'dark'
-                ? 'dark bg-[#0b0f19] text-slate-100 cyber-grid'
-                : 'bg-slate-50 text-slate-900 cyber-grid'
-            }`}
-          >
-            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-              <Spotlight fill="#10b981" className="-top-40 left-1/4 opacity-20 dark:opacity-40" />
-              <Spotlight fill="#06b6d4" className="top-1/2 -right-40 opacity-20 dark:opacity-40" />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 font-sans selection:bg-emerald-500/30 transition-colors duration-300 relative cyber-grid overflow-x-hidden">
       {/* Ambient Spotlight */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <Spotlight fill="#10b981" className="-top-40 left-1/4 opacity-20 dark:opacity-40" />
@@ -140,15 +86,32 @@ function App() {
           >
             <Database size={16} className="text-emerald-600 dark:text-emerald-400" />
           </motion.button>
+          
+          {/* Sleek Vercel/Linear-Style Theme Morph Button */}
           <motion.button
-            whileHover={{ scale: 1.14, rotate: 15 }}
-            whileTap={{ scale: 0.88 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
             onClick={toggleTheme}
-            className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/5 transition-colors active:scale-95"
+            className="p-2.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 hover:border-emerald-500/50 transition-all shadow-sm active:scale-95 relative overflow-hidden"
             title="Toggle Theme"
           >
-            {theme === 'dark' ? <Sun size={16} className="text-amber-400" /> : <Moon size={16} className="text-slate-700" />}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={theme}
+                initial={{ y: -15, opacity: 0, rotate: -90 }}
+                animate={{ y: 0, opacity: 1, rotate: 0 }}
+                exit={{ y: 15, opacity: 0, rotate: 90 }}
+                transition={{ duration: 0.22, ease: "easeInOut" }}
+              >
+                {theme === 'dark' ? (
+                  <Sun size={16} className="text-amber-400" />
+                ) : (
+                  <Moon size={16} className="text-slate-700" />
+                )}
+              </motion.div>
+            </AnimatePresence>
           </motion.button>
+
           <a
             href="https://github.com/somyacodes07"
             target="_blank"
