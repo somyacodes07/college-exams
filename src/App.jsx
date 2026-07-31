@@ -48,22 +48,24 @@ function App() {
     fetchStats();
   }, [selectedStudent]);
 
-  // Synchronous View Transition Circular Ripple Effect
+  // Ultra-Accurate & Smooth Circular View Transition Originating from Button Center
   const toggleTheme = (e) => {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
 
-    if (!document.startViewTransition) {
-      setTheme(nextTheme);
-      return;
-    }
-
-    const x = e?.clientX ?? window.innerWidth / 2;
-    const y = e?.clientY ?? window.innerHeight / 2;
+    // Calculate EXACT geometric center of the theme toggle button element
+    const buttonRect = e?.currentTarget ? e.currentTarget.getBoundingClientRect() : null;
+    const x = buttonRect ? buttonRect.left + buttonRect.width / 2 : window.innerWidth / 2;
+    const y = buttonRect ? buttonRect.top + buttonRect.height / 2 : window.innerHeight / 2;
 
     const endRadius = Math.hypot(
       Math.max(x, window.innerWidth - x),
       Math.max(y, window.innerHeight - y)
     );
+
+    if (!document.startViewTransition) {
+      setTheme(nextTheme);
+      return;
+    }
 
     const transition = document.startViewTransition(() => {
       flushSync(() => {
@@ -78,18 +80,16 @@ function App() {
     });
 
     transition.ready.then(() => {
-      const clipPath = [
-        `circle(0px at ${x}px ${y}px)`,
-        `circle(${endRadius}px at ${x}px ${y}px)`,
-      ];
-
       document.documentElement.animate(
         {
-          clipPath: clipPath,
+          clipPath: [
+            `circle(0px at ${x}px ${y}px)`,
+            `circle(${endRadius}px at ${x}px ${y}px)`,
+          ],
         },
         {
-          duration: 500,
-          easing: 'ease-in-out',
+          duration: 600,
+          easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
           pseudoElement: '::view-transition-new(root)',
         }
       );
@@ -97,7 +97,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 font-sans selection:bg-emerald-500/30 transition-colors duration-300 relative cyber-grid overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 font-sans selection:bg-emerald-500/30 relative cyber-grid overflow-x-hidden">
       {/* Ambient Spotlight */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <Spotlight fill="#10b981" className="-top-40 left-1/4 opacity-20 dark:opacity-40" />
