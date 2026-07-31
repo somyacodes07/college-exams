@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Github, Instagram, Sun, Moon, Database, Users, Calendar, HelpCircle, Sparkles } from 'lucide-react';
+import { Github, Instagram, Sun, Moon, Database, Users, Calendar, HelpCircle } from 'lucide-react';
 import { Analytics } from '@vercel/analytics/react';
 import Search from './components/Search';
 import ScheduleCard from './components/ScheduleCard';
@@ -115,7 +115,7 @@ function App() {
         </div>
       </motion.header>
 
-      {/* Main Content Area - Mobile Padding Adjustments */}
+      {/* Main Content Area */}
       <div className="relative z-10 container mx-auto px-4 pt-24 sm:pt-36 pb-16 max-w-5xl">
         {/* Hero Banner */}
         <motion.div
@@ -123,12 +123,7 @@ function App() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-8 sm:mb-10 px-2"
         >
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-800 dark:text-emerald-400 text-[10px] sm:text-xs font-mono font-bold uppercase tracking-widest mb-3 sm:mb-4">
-            <Sparkles size={12} className="sm:w-3.5 sm:h-3.5" />
-            <span>Academic Schedule Engine</span>
-          </div>
-
-          <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold font-heading mb-2.5 tracking-tight text-slate-900 dark:text-white leading-tight">
+          <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold font-heading mb-3 tracking-tight text-slate-900 dark:text-white leading-tight">
             Exam Scheduler
           </h1>
           <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base md:text-lg max-w-xl mx-auto font-sans leading-relaxed">
