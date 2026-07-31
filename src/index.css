@@ -80,7 +80,7 @@ body {
   box-shadow: 0 0 25px -5px rgba(139, 92, 246, 0.25);
 }
 
-/* View Transition Circular Ripple Animation */
+/* View Transition Circular Wipe Rules */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
@@ -93,12 +93,4 @@ body {
 
 ::view-transition-new(root) {
   z-index: 9999;
-}
-
-.dark::view-transition-old(root) {
-  z-index: 9999;
-}
-
-.dark::view-transition-new(root) {
-  z-index: 1;
 }

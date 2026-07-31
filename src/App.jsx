@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { flushSync } from 'react-dom';
+import { motion } from 'framer-motion';
 import { Github, Instagram, Sun, Moon, Database, Users, Calendar, HelpCircle } from 'lucide-react';
 import { Analytics } from '@vercel/analytics/react';
 import Search from './components/Search';
@@ -15,7 +16,6 @@ function App() {
   const [studentCount, setStudentCount] = useState(0);
   const [syncVersion, setSyncVersion] = useState(0);
   const [dbStatus, setDbStatus] = useState('connecting'); // connecting | online | offline
-  const [rippleState, setRippleState] = useState(null); // { x, y, endRadius, targetTheme }
 
   const [theme, setTheme] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -48,52 +48,56 @@ function App() {
     fetchStats();
   }, [selectedStudent]);
 
-  // Guaranteed Cross-Browser Circular Expanding Ripple Theme Transition
+  // Synchronous View Transition Circular Ripple Effect
   const toggleTheme = (e) => {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e?.clientX ?? (rect.left + rect.width / 2);
-    const y = e?.clientY ?? (rect.top + rect.height / 2);
+
+    if (!document.startViewTransition) {
+      setTheme(nextTheme);
+      return;
+    }
+
+    const x = e?.clientX ?? window.innerWidth / 2;
+    const y = e?.clientY ?? window.innerHeight / 2;
 
     const endRadius = Math.hypot(
       Math.max(x, window.innerWidth - x),
       Math.max(y, window.innerHeight - y)
     );
 
-    setRippleState({ x, y, endRadius, targetTheme: nextTheme });
+    const transition = document.startViewTransition(() => {
+      flushSync(() => {
+        setTheme(nextTheme);
+        const root = window.document.documentElement;
+        if (nextTheme === 'dark') {
+          root.classList.add('dark');
+        } else {
+          root.classList.remove('dark');
+        }
+      });
+    });
+
+    transition.ready.then(() => {
+      const clipPath = [
+        `circle(0px at ${x}px ${y}px)`,
+        `circle(${endRadius}px at ${x}px ${y}px)`,
+      ];
+
+      document.documentElement.animate(
+        {
+          clipPath: clipPath,
+        },
+        {
+          duration: 500,
+          easing: 'ease-in-out',
+          pseudoElement: '::view-transition-new(root)',
+        }
+      );
+    });
   };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 font-sans selection:bg-emerald-500/30 transition-colors duration-300 relative cyber-grid overflow-x-hidden">
-      {/* 360-Degree Circular Wipe Overlay for Theme Switch */}
-      <AnimatePresence>
-        {rippleState && (
-          <motion.div
-            key="theme-ripple"
-            initial={{
-              clipPath: `circle(0px at ${rippleState.x}px ${rippleState.y}px)`,
-            }}
-            animate={{
-              clipPath: `circle(${rippleState.endRadius}px at ${rippleState.x}px ${rippleState.y}px)`,
-            }}
-            exit={{ opacity: 0 }}
-            transition={{
-              duration: 0.55,
-              ease: [0.4, 0, 0.2, 1],
-            }}
-            onAnimationStart={() => {
-              setTheme(rippleState.targetTheme);
-            }}
-            onAnimationComplete={() => {
-              setRippleState(null);
-            }}
-            className={`fixed inset-0 z-[99999] pointer-events-none ${
-              rippleState.targetTheme === 'dark' ? 'bg-[#0b0f19]' : 'bg-[#f8fafc]'
-            }`}
-          />
-        )}
-      </AnimatePresence>
-
       {/* Ambient Spotlight */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <Spotlight fill="#10b981" className="-top-40 left-1/4 opacity-20 dark:opacity-40" />
