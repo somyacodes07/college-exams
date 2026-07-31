@@ -46,8 +46,50 @@ function App() {
     fetchStats();
   }, [selectedStudent]);
 
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  // Mind-Blowing Circular Expanding Ripple Theme Transition
+  const toggleTheme = (e) => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+
+    if (!document.startViewTransition || !e?.clientX) {
+      setTheme(nextTheme);
+      return;
+    }
+
+    const x = e.clientX;
+    const y = e.clientY;
+    const endRadius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    );
+
+    const transition = document.startViewTransition(() => {
+      setTheme(nextTheme);
+      const root = window.document.documentElement;
+      if (nextTheme === 'dark') {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
+    });
+
+    transition.ready.then(() => {
+      const clipPath = [
+        `circle(0px at ${x}px ${y}px)`,
+        `circle(${endRadius}px at ${x}px ${y}px)`,
+      ];
+      document.documentElement.animate(
+        {
+          clipPath: theme === 'dark' ? [...clipPath].reverse() : clipPath,
+        },
+        {
+          duration: 550,
+          easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+          pseudoElement: theme === 'dark'
+            ? '::view-transition-old(root)'
+            : '::view-transition-new(root)',
+        }
+      );
+    });
   };
 
   return (
@@ -86,8 +128,8 @@ function App() {
             <Database size={16} className="text-emerald-600 dark:text-emerald-400" />
           </motion.button>
           <motion.button
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.92 }}
+            whileHover={{ scale: 1.14, rotate: 15 }}
+            whileTap={{ scale: 0.88 }}
             onClick={toggleTheme}
             className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/5 transition-colors active:scale-95"
             title="Toggle Theme"
