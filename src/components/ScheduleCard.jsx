@@ -1,12 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Clock, BookOpen, Code, AlertCircle, MapPin, Download, User as PersonIcon, Copy, Check } from 'lucide-react';
 import { generateICS, downloadICS } from '../utils/icsGenerator';
 import tutVideo from '../assets/tut.mp4';
 
-const item = {
-    hidden: { opacity: 0, x: -20 },
-    show: { opacity: 1, x: 0 }
+const itemVariants = {
+    hidden: { opacity: 0, y: 15 },
+    show: { opacity: 1, y: 0 }
 };
 
 const formatKeyName = (key) => {
@@ -16,12 +16,13 @@ const formatKeyName = (key) => {
 
 const ExamItem = ({ exam, type }) => {
     const isTheory = type === 'theory';
-    const accentColor = isTheory ? 'text-purple-600 dark:text-purple-400' : 'text-cyan-600 dark:text-cyan-400';
-    const borderColor = isTheory ? 'hover:border-purple-500/50 dark:group-hover:border-purple-500/50' : 'hover:border-cyan-500/50 dark:group-hover:border-cyan-500/50';
-    const shadowColor = isTheory ? 'hover:shadow-[0_0_30px_rgba(168,85,247,0.15)]' : 'hover:shadow-[0_0_30px_rgba(6,182,212,0.15)]';
+    const accentColor = isTheory ? 'text-purple-600 dark:text-purple-400' : 'text-emerald-600 dark:text-emerald-400';
+    const borderHover = isTheory 
+        ? 'hover:border-purple-500/40 hover:shadow-md dark:hover:shadow-[0_0_25px_-5px_rgba(168,85,247,0.25)]' 
+        : 'hover:border-emerald-500/40 hover:shadow-md dark:hover:shadow-[0_0_25px_-5px_rgba(16,185,129,0.25)]';
     const badgeBg = isTheory
-        ? 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-400/10 dark:text-purple-300 dark:border-purple-400/20'
-        : 'bg-cyan-100 text-cyan-700 border-cyan-200 dark:bg-cyan-400/10 dark:text-cyan-300 dark:border-cyan-400/20';
+        ? 'bg-purple-100 dark:bg-purple-500/10 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-500/20'
+        : 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/20';
 
     const standardFields = ['date', 'subject', 'time', 'location', 'type', 'panel', 'professor', '_id', '__v'];
     const extraFields = Object.keys(exam).filter(key => {
@@ -36,42 +37,38 @@ const ExamItem = ({ exam, type }) => {
 
     return (
         <motion.div
-            variants={item}
-            className={`group relative bg-white/50 dark:bg-slate-950 text-left backdrop-blur-sm rounded-xl p-5 border border-slate-200 dark:border-white/5 ${borderColor} transition-[border-color,background-color,box-shadow] duration-300 ${shadowColor}`}
+            variants={itemVariants}
+            className={`group relative bg-white dark:bg-[#0f1422]/90 text-left rounded-2xl p-4 sm:p-5 border border-slate-200/90 dark:border-white/10 ${borderHover} transition-all duration-300 backdrop-blur-xl shadow-sm dark:shadow-none`}
         >
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3.5">
                 {/* Subject Header */}
-                <div className="flex flex-col gap-3">
-                    <h4 className={`text-lg md:text-xl font-bold text-slate-800 dark:text-slate-100 leading-tight group-hover:text-black dark:group-hover:text-white transition-colors flex-1`}>
+                <div className="flex flex-col gap-2">
+                    <h4 className={`text-base sm:text-lg md:text-xl font-bold font-heading text-slate-900 dark:text-white leading-snug ${isTheory ? 'group-hover:text-purple-600 dark:group-hover:text-purple-400' : 'group-hover:text-emerald-600 dark:group-hover:text-emerald-400'} transition-colors`}>
                         {exam.subject}
                     </h4>
-                    <div className="flex flex-wrap items-center gap-2">
+
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                         {exam.location && exam.location !== 'TBD' && exam.location.trim().toLowerCase() !== (exam.panel || '').trim().toLowerCase() && (
-                            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${badgeBg}`}>
+                            <div className={`flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold ${badgeBg}`}>
                                 <MapPin size={12} />
                                 <span>{exam.location}</span>
                             </div>
                         )}
                         {exam.professor && (
-                            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${badgeBg}`}>
+                            <div className={`flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold ${badgeBg}`}>
                                 <PersonIcon size={12} />
                                 <span>{exam.professor}</span>
                             </div>
                         )}
-                        {/* Panel Display Logic */}
                         {exam.panel && exam.panel !== 'Unknown' && (
-                            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${badgeBg} opacity-90`}>
+                            <div className={`flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold ${badgeBg} opacity-90`}>
                                 <span>
-                                    {/* If professor is already shown, just show "Panel X" to avoid redundancy */}
-                                    {exam.professor ?
-                                        exam.panel.split(' ').slice(0, 2).join(' ') :
-                                        exam.panel}
+                                    {exam.professor ? exam.panel.split(' ').slice(0, 2).join(' ') : exam.panel}
                                 </span>
                             </div>
                         )}
-                        {/* Render extra dynamic columns */}
                         {extraFields.map(key => (
-                            <div key={key} className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${badgeBg} opacity-85`}>
+                            <div key={key} className={`flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold ${badgeBg} opacity-80`}>
                                 <span className="opacity-70 font-normal">{formatKeyName(key)}: </span>
                                 <span>{exam[key]}</span>
                             </div>
@@ -79,15 +76,15 @@ const ExamItem = ({ exam, type }) => {
                     </div>
                 </div>
 
-                {/* Meta Details */}
-                <div className="flex flex-wrap gap-3 text-sm font-medium text-slate-600 dark:text-slate-300">
-                    <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800/50 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/5 transition-colors duration-300">
-                        <Calendar size={14} className={accentColor} />
-                        {exam.date ? exam.date.replace(/^Day \d+:\s*/, '') : 'NA'}
+                {/* Date & Time Badges */}
+                <div className="flex flex-wrap gap-2 text-xs font-mono">
+                    <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/60 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl border border-slate-200 dark:border-white/5 text-slate-700 dark:text-slate-300">
+                        <Calendar size={13} className={accentColor} />
+                        <span>{exam.date ? exam.date.replace(/^Day \d+:\s*/, '') : 'NA'}</span>
                     </div>
-                    <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800/50 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/5 transition-colors duration-300">
-                        <Clock size={14} className={accentColor} />
-                        {exam.time || 'NA'}
+                    <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/60 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl border border-slate-200 dark:border-white/5 text-slate-700 dark:text-slate-300">
+                        <Clock size={13} className={accentColor} />
+                        <span>{exam.time || 'NA'}</span>
                     </div>
                 </div>
             </div>
@@ -96,12 +93,12 @@ const ExamItem = ({ exam, type }) => {
 };
 
 const ScheduleCard = ({ student }) => {
-    const [isCopied, setIsCopied] = React.useState(false);
+    const [isCopied, setIsCopied] = useState(false);
 
     if (!student) return null;
 
-    const theoryExams = student.theory;
-    const practicalExams = student.practical;
+    const theoryExams = student.theory || [];
+    const practicalExams = student.practical || [];
 
     const handleExport = () => {
         const icsContent = generateICS(student);
@@ -114,82 +111,92 @@ const ScheduleCard = ({ student }) => {
         setTimeout(() => setIsCopied(false), 2000);
     };
 
-    const container = {
+    const containerVariants = {
         hidden: { opacity: 0, y: 20 },
         show: {
             opacity: 1,
             y: 0,
-            transition: {
-                staggerChildren: 0.05
-            }
+            transition: { staggerChildren: 0.08 }
         }
     };
 
     return (
         <motion.div
-            variants={container}
+            variants={containerVariants}
             initial="hidden"
             animate="show"
-            className="w-full space-y-8"
+            className="w-full space-y-6 sm:space-y-8"
         >
-            {/* Student Header */}
-            <div className="relative overflow-hidden bg-gradient-to-br from-white via-slate-50 to-white dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 rounded-3xl p-6 md:p-8 text-center border border-slate-200 dark:border-white/10 shadow-2xl group transition-all duration-500">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500" />
-                <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:16px_16px]" />
+            {/* Student Header Card - Big Prominent Roll Number & Compact Calendar Pill */}
+            <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-[#0c101c]/90 border border-slate-200/90 dark:border-white/10 p-5 sm:p-8 backdrop-blur-2xl shadow-xl dark:shadow-none transition-all duration-300">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-cyan-500 to-purple-500" />
+                <div className="absolute top-0 right-0 w-72 sm:w-96 h-72 sm:h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
-                <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={handleExport}
-                    className="absolute top-4 right-4 p-2 bg-slate-100 dark:bg-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-700/50 text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 rounded-xl transition-colors border border-slate-200 dark:border-white/5 backdrop-blur-sm z-20"
-                    title="Export to Calendar (.ics)"
-                >
-                    <Download size={20} />
-                </motion.button>
+                <div className="flex flex-col md:flex-row items-center justify-between gap-5 sm:gap-6 relative z-10">
+                    <div className="text-center md:text-left space-y-3 w-full md:w-auto">
+                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5 sm:gap-3">
+                            <h2 className="text-2xl sm:text-4xl md:text-5xl font-extrabold font-heading text-slate-900 dark:text-white tracking-tight leading-tight">
+                                {student.name}
+                            </h2>
+                            {student.batch && (
+                                <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[11px] sm:text-xs font-mono font-bold bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
+                                    Batch {student.batch}
+                                </span>
+                            )}
+                        </div>
 
-                <div className="relative z-10">
-                    <div className="flex flex-col md:flex-row items-center justify-center gap-3 mb-3">
-                        <h2 className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900 dark:from-white dark:via-slate-200 dark:to-slate-400 tracking-tight transition-all duration-500">
-                            {student.name}
-                        </h2>
-                        {student.batch && (
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-cyan-100 dark:bg-cyan-950 text-cyan-800 dark:text-cyan-200 border border-cyan-200 dark:border-cyan-800/50 transition-all duration-300">
-                                Batch {student.batch}
-                            </span>
-                        )}
+                        {/* PROMINENT HUGE ROLL NUMBER BADGE */}
+                        <div className="inline-flex items-center gap-2.5 px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl bg-emerald-100/80 dark:bg-emerald-500/15 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-mono text-xl sm:text-2xl md:text-3xl font-black tracking-wider shadow-sm">
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
+                            <span>{student.rollNo}</span>
+                            <button
+                                onClick={handleCopyRoll}
+                                className="ml-1 p-1.5 hover:bg-emerald-200 dark:hover:bg-emerald-500/20 rounded-xl transition-colors text-emerald-700 dark:text-emerald-400 active:scale-95"
+                                title="Copy Roll Number"
+                            >
+                                {isCopied ? <Check size={18} className="text-emerald-600 dark:text-emerald-400" /> : <Copy size={18} />}
+                            </button>
+                        </div>
                     </div>
-                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-white/10 text-cyan-600 dark:text-cyan-400 font-mono text-lg md:text-xl tracking-wider group/roll transition-colors duration-300">
-                        <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                        {student.rollNo}
-                        <button
-                            onClick={handleCopyRoll}
-                            className="ml-2 p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700/50 rounded-lg transition-colors text-slate-500 dark:text-slate-500 hover:text-cyan-600 dark:hover:text-cyan-400"
-                            title="Copy Roll Number"
-                        >
-                            {isCopied ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
-                        </button>
-                    </div>
+
+                    {/* DISCREET COMPACT CALENDAR BUTTON */}
+                    <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={handleExport}
+                        className="px-3.5 py-2 sm:px-4 sm:py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl transition-all border border-slate-200 dark:border-white/10 flex items-center gap-2 text-xs whitespace-nowrap active:scale-95 self-center md:self-start"
+                        title="Export schedule to calendar file"
+                    >
+                        <Calendar size={14} className="text-emerald-600 dark:text-emerald-400" />
+                        <span>Export Calendar (.ics)</span>
+                    </motion.button>
                 </div>
             </div>
 
-            <div className="grid lg:grid-cols-2 gap-8 items-start">
+            {/* Theory vs Practical Split Layout */}
+            <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 items-start">
                 {/* Theory Section */}
-                <div className="flex flex-col h-full bg-white/40 dark:bg-slate-900/20 rounded-3xl p-6 border border-slate-200 dark:border-white/5 transition-colors duration-500">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="p-2.5 bg-purple-500/10 rounded-xl border border-purple-500/20 text-purple-400">
-                            <BookOpen size={24} />
+                <div className="flex flex-col h-full bg-white dark:bg-[#0c101c]/50 rounded-3xl p-5 sm:p-6 border border-slate-200/90 dark:border-white/10 backdrop-blur-xl shadow-sm dark:shadow-none">
+                    <div className="flex items-center justify-between mb-5 sm:mb-6 pb-3.5 sm:pb-4 border-b border-slate-200/60 dark:border-white/5">
+                        <div className="flex items-center gap-2.5 sm:gap-3">
+                            <div className="p-2 sm:p-2.5 bg-purple-100 dark:bg-purple-500/10 rounded-2xl border border-purple-200 dark:border-purple-500/20 text-purple-600 dark:text-purple-400 flex-shrink-0">
+                                <BookOpen size={20} className="sm:w-5 sm:h-5" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg sm:text-xl font-bold font-heading text-slate-900 dark:text-white">Theory Schedule</h3>
+                                <p className="text-[11px] sm:text-xs text-slate-500 font-mono">Classroom & Written Exams</p>
+                            </div>
                         </div>
-                        <div>
-                            <h3 className="text-2xl font-bold text-slate-800 dark:text-white transition-colors">Theory</h3>
-                            <p className="text-slate-500 text-sm">Classroom Based</p>
-                        </div>
+                        <span className="text-[10px] sm:text-xs font-mono font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-purple-100 dark:bg-purple-500/10 text-purple-800 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20 flex-shrink-0">
+                            {theoryExams.length} Papers
+                        </span>
                     </div>
 
-                    <div className="space-y-4 flex-1">
+                    <div className="space-y-3.5 sm:space-y-4 flex-1">
                         {theoryExams.length === 0 ? (
-                            <div className="h-full min-h-[200px] flex flex-col items-center justify-center bg-slate-50/50 dark:bg-slate-900/40 rounded-2xl p-8 border border-slate-200 dark:border-white/5 border-dashed text-center text-slate-500 transition-colors duration-300">
-                                <AlertCircle className="mb-3 opacity-50 w-12 h-12" />
-                                <p>No theory exams scheduled.</p>
+                            <div className="h-full min-h-[160px] flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900/30 rounded-2xl p-6 border border-dashed border-slate-200 dark:border-white/10 text-center text-slate-500 dark:text-slate-400">
+                                <AlertCircle className="mb-2 opacity-40 w-8 h-8 sm:w-10 sm:h-10" />
+                                <p className="text-xs sm:text-sm">No theory exams scheduled.</p>
                             </div>
                         ) : (
                             theoryExams.map((exam, idx) => (
@@ -200,22 +207,27 @@ const ScheduleCard = ({ student }) => {
                 </div>
 
                 {/* Practical Section */}
-                <div className="flex flex-col h-full bg-white/40 dark:bg-slate-900/20 rounded-3xl p-6 border border-slate-200 dark:border-white/5 transition-colors duration-500">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="p-2.5 bg-cyan-500/10 rounded-xl border border-cyan-500/20 text-cyan-400">
-                            <Code size={24} />
+                <div className="flex flex-col h-full bg-white dark:bg-[#0c101c]/50 rounded-3xl p-5 sm:p-6 border border-slate-200/90 dark:border-white/10 backdrop-blur-xl shadow-sm dark:shadow-none">
+                    <div className="flex items-center justify-between mb-5 sm:mb-6 pb-3.5 sm:pb-4 border-b border-slate-200/60 dark:border-white/5">
+                        <div className="flex items-center gap-2.5 sm:gap-3">
+                            <div className="p-2 sm:p-2.5 bg-emerald-100 dark:bg-emerald-500/10 rounded-2xl border border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex-shrink-0">
+                                <Code size={20} className="sm:w-5 sm:h-5" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg sm:text-xl font-bold font-heading text-slate-900 dark:text-white">Practical Schedule</h3>
+                                <p className="text-[11px] sm:text-xs text-slate-500 font-mono">Lab Vivas & Projects</p>
+                            </div>
                         </div>
-                        <div>
-                            <h3 className="text-2xl font-bold text-slate-800 dark:text-white transition-colors">Practical</h3>
-                            <p className="text-slate-500 text-sm">Lab & Vivas</p>
-                        </div>
+                        <span className="text-[10px] sm:text-xs font-mono font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 flex-shrink-0">
+                            {practicalExams.length} Labs
+                        </span>
                     </div>
 
-                    <div className="space-y-4 flex-1">
+                    <div className="space-y-3.5 sm:space-y-4 flex-1">
                         {practicalExams.length === 0 ? (
-                            <div className="h-full min-h-[200px] flex flex-col items-center justify-center bg-slate-50/50 dark:bg-slate-900/40 rounded-2xl p-8 border border-slate-200 dark:border-white/5 border-dashed text-center text-slate-500 transition-colors duration-300">
-                                <AlertCircle className="mb-3 opacity-50 w-12 h-12" />
-                                <p>No practical exams scheduled.</p>
+                            <div className="h-full min-h-[160px] flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900/30 rounded-2xl p-6 border border-dashed border-slate-200 dark:border-white/10 text-center text-slate-500 dark:text-slate-400">
+                                <AlertCircle className="mb-2 opacity-40 w-8 h-8 sm:w-10 sm:h-10" />
+                                <p className="text-xs sm:text-sm">No practical exams scheduled.</p>
                             </div>
                         ) : (
                             practicalExams.map((exam, idx) => (
@@ -226,41 +238,40 @@ const ScheduleCard = ({ student }) => {
                 </div>
             </div>
 
-            {/* Calendar Tutorial Section */}
+            {/* Calendar Tutorial Card */}
             <motion.div
-                variants={item}
-                className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 rounded-3xl p-6 md:p-8 border border-slate-200 dark:border-white/10 relative overflow-hidden transition-colors duration-500"
+                variants={itemVariants}
+                className="relative overflow-hidden rounded-3xl bg-white dark:bg-[#0c101c]/90 border border-slate-200/90 dark:border-white/10 p-5 sm:p-8 backdrop-blur-2xl shadow-xl dark:shadow-none"
             >
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500" />
-
-                <div className="flex flex-col md:flex-row items-center justify-between gap-8 relative z-10">
-                    <div className="space-y-4 text-center md:text-left max-w-xl">
-                        <div className="flex items-center justify-center md:justify-start gap-3 text-cyan-600 dark:text-cyan-400 mb-2">
-                            <Calendar size={24} />
-                            <h3 className="text-2xl font-bold text-slate-800 dark:text-white transition-colors">Sync with your Calendar</h3>
+                <div className="flex flex-col md:flex-row items-center justify-between gap-6 sm:gap-8">
+                    <div className="space-y-3 text-center md:text-left w-full md:max-w-lg">
+                        <div className="flex items-center justify-center md:justify-start gap-2 text-emerald-600 dark:text-emerald-500 font-bold text-base sm:text-lg">
+                            <Calendar size={20} />
+                            <span>Calendar Sync Workflow</span>
                         </div>
-                        <p className="text-slate-600 dark:text-slate-400 leading-relaxed transition-colors">
-                            Never miss an exam! Download your schedule and add it directly to your calendar in one click.
+                        <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                            Optional calendar sync for Google Calendar, Apple Calendar, or Outlook.
                         </p>
-                        <ol className="text-sm text-slate-600 dark:text-slate-500 space-y-2 list-decimal list-inside bg-white dark:bg-slate-950/50 p-4 rounded-xl border border-slate-200 dark:border-white/5 transition-colors">
-                            <li>Click the <strong>Add to Calendar</strong> button</li>
-                            <li>Open the downloaded <code className="text-cyan-600 dark:text-cyan-400">.ics</code> file</li>
-                            <li>Click <strong>Add All</strong> to save to your calendar</li>
+                        <ol className="text-xs font-mono text-slate-600 dark:text-slate-400 space-y-1.5 list-decimal list-inside bg-slate-50 dark:bg-slate-900/60 p-3.5 sm:p-4 rounded-2xl border border-slate-200/60 dark:border-white/5">
+                            <li>Click <strong>Export Calendar</strong> button</li>
+                            <li>Open the downloaded <code className="text-emerald-600 dark:text-emerald-400">.ics</code> file</li>
+                            <li>Confirm <strong>Add All</strong> in your calendar app</li>
                         </ol>
                     </div>
 
                     <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
                         onClick={handleExport}
-                        className="group relative px-8 py-4 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-xl transition-all shadow-lg shadow-cyan-500/20 flex items-center gap-3 whitespace-nowrap"
+                        className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl transition-all border border-slate-200 dark:border-white/10 flex items-center justify-center gap-2 text-xs active:scale-95"
                     >
-                        <Download className="w-5 h-5 group-hover:animate-bounce" />
-                        <span>Add to Calendar</span>
+                        <Download size={14} />
+                        <span>Export (.ics)</span>
                     </motion.button>
                 </div>
 
-                <div className="mt-8 relative z-10 rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+                {/* Tutorial Video Frame */}
+                <div className="mt-6 sm:mt-8 rounded-2xl overflow-hidden border border-slate-200/80 dark:border-white/10 shadow-xl bg-slate-900">
                     <video
                         src={tutVideo}
                         autoPlay
@@ -268,13 +279,9 @@ const ScheduleCard = ({ student }) => {
                         muted
                         playsInline
                         preload="metadata"
-                        className="w-full h-auto object-cover"
+                        className="w-full h-auto object-cover opacity-90 hover:opacity-100 transition-opacity"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/50 to-transparent pointer-events-none" />
                 </div>
-
-                <div className="absolute -right-20 -bottom-20 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-                <div className="absolute -left-20 -top-20 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
             </motion.div>
         </motion.div>
     );

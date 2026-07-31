@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Search as SearchIcon, X, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Search as SearchIcon, X, Loader2, Command, Sparkles, User, Hash } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getStudentByRoll, getSearchIndex } from '../utils/api';
 
@@ -10,8 +10,8 @@ const Search = ({ onSelectStudent }) => {
     const [isFocused, setIsFocused] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [isIndexing, setIsIndexing] = useState(true);
+    const inputRef = useRef(null);
 
-    // Fetch lightweight search index on mount
     useEffect(() => {
         let active = true;
         const loadIndex = async () => {
@@ -34,7 +34,17 @@ const Search = ({ onSelectStudent }) => {
         };
     }, []);
 
-    // Filter suggestions instantaneously on query change
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if ((e.key === '/' || (e.metaKey && e.key === 'k') || (e.ctrlKey && e.key === 'k')) && document.activeElement !== inputRef.current) {
+                e.preventDefault();
+                inputRef.current?.focus();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
     useEffect(() => {
         if (query.trim().length < 2) {
             setSuggestions([]);
@@ -45,7 +55,7 @@ const Search = ({ onSelectStudent }) => {
         const filtered = searchIndex.filter(student => 
             (student.name && student.name.toLowerCase().includes(normalizedQuery)) ||
             (student.rollNo && student.rollNo.toLowerCase().includes(normalizedQuery))
-        ).slice(0, 10);
+        ).slice(0, 8);
 
         setSuggestions(filtered);
     }, [query, searchIndex]);
@@ -67,65 +77,105 @@ const Search = ({ onSelectStudent }) => {
     };
 
     return (
-        <div className="relative w-full max-w-lg mx-auto z-50">
-            <div className={`relative flex items-center bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-white/10 rounded-2xl overflow-hidden transition-all duration-300 shadow-sm ${isFocused ? 'ring-2 ring-cyan-500/20 border-cyan-500/50 shadow-cyan-500/10' : 'hover:border-slate-300 dark:hover:border-white/20'}`}>
-                {isLoading ? (
-                    <Loader2 className="w-5 h-5 text-cyan-500 ml-4 animate-spin" />
-                ) : (
-                    <SearchIcon className="w-5 h-5 text-slate-400 dark:text-slate-500 ml-4 transition-colors" />
-                )}
+        <div className="relative w-full max-w-xl mx-auto z-50 px-1 sm:px-0">
+            {/* Ambient Search Glow */}
+            <div className={`absolute -inset-1 bg-gradient-to-r from-emerald-500/20 via-cyan-500/20 to-purple-500/20 rounded-3xl blur-xl transition-opacity duration-500 ${isFocused ? 'opacity-100' : 'opacity-30'}`} />
+
+            <div className={`relative flex items-center bg-white dark:bg-[#0c101c]/95 border transition-all duration-300 rounded-2xl overflow-hidden backdrop-blur-2xl shadow-lg shadow-slate-200/50 dark:shadow-none ${
+                isFocused 
+                    ? 'border-emerald-500/80 ring-2 ring-emerald-500/20' 
+                    : 'border-slate-200/90 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20'
+            }`}>
+                <div className="pl-3.5 sm:pl-4 pr-1">
+                    {isLoading ? (
+                        <Loader2 className="w-5 h-5 text-emerald-600 dark:text-emerald-500 animate-spin" />
+                    ) : (
+                        <SearchIcon className={`w-5 h-5 transition-colors ${isFocused ? 'text-emerald-600 dark:text-emerald-500' : 'text-slate-400 dark:text-slate-500'}`} />
+                    )}
+                </div>
+
                 <input
+                    ref={inputRef}
                     type="text"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     onFocus={() => setIsFocused(true)}
                     onBlur={() => setTimeout(() => setIsFocused(false), 200)}
-                    placeholder="Search by Name or Roll No..."
-                    className="w-full bg-transparent text-slate-900 dark:text-white text-base px-4 py-4 outline-none placeholder-slate-400 dark:placeholder-slate-500 transition-colors"
+                    placeholder="Search Name or Roll Number..."
+                    className="w-full bg-transparent text-slate-900 dark:text-white font-sans text-base px-2.5 sm:px-3 py-3.5 sm:py-4 outline-none placeholder-slate-400 dark:placeholder-slate-500 min-h-[48px]"
                 />
-                {query && (
-                    <button
-                        onClick={() => {
-                            setQuery('');
-                            setSuggestions([]);
-                            onSelectStudent(null);
-                        }}
-                        className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors mr-2"
-                    >
-                        <X size={20} />
-                    </button>
-                )}
+
+                <div className="flex items-center gap-1.5 pr-3 sm:pr-4">
+                    {query ? (
+                        <button
+                            onClick={() => {
+                                setQuery('');
+                                setSuggestions([]);
+                                onSelectStudent(null);
+                            }}
+                            className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors active:scale-95"
+                            title="Clear search"
+                        >
+                            <X size={18} />
+                        </button>
+                    ) : (
+                        <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-white/5 text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                            <Command size={10} />
+                            <span>K</span>
+                        </div>
+                    )}
+                </div>
             </div>
 
+            {/* Instant Predictive Suggestions Dropdown */}
             <AnimatePresence>
                 {suggestions.length > 0 && isFocused && (
                     <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="absolute top-full left-0 right-0 mt-3 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto z-50"
+                        initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute top-full left-1 right-1 sm:left-0 sm:right-0 mt-2.5 bg-white dark:bg-[#0c101c]/95 border border-slate-200/90 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-2xl max-h-64 sm:max-h-72 overflow-y-auto z-50 divide-y divide-slate-100 dark:divide-white/5"
                     >
+                        <div className="px-3.5 sm:px-4 py-2 bg-slate-50 dark:bg-slate-900/40 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center justify-between border-b border-slate-200/60 dark:border-white/5">
+                            <span>Matches ({suggestions.length})</span>
+                            <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-500">
+                                <Sparkles size={10} /> Instant lookup
+                            </span>
+                        </div>
+
                         {suggestions.map((student) => (
                             <div
                                 key={student.rollNo}
                                 onClick={() => handleSelect(student)}
-                                className="px-5 py-3.5 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 cursor-pointer transition-colors border-b border-slate-200/50 dark:border-white/5 last:border-none group"
+                                className="px-4 sm:px-5 py-3 sm:py-3.5 hover:bg-slate-100 dark:hover:bg-emerald-500/10 active:bg-slate-200 dark:active:bg-emerald-500/20 cursor-pointer transition-all flex items-center justify-between gap-2 group"
                             >
-                                <div className="flex justify-between items-center gap-2">
-                                    <div className="text-slate-700 dark:text-slate-200 font-bold group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors truncate">{student.name}</div>
-                                    {student.batch && (
-                                        <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-cyan-100 dark:bg-cyan-950 text-cyan-800 dark:text-cyan-200 border border-cyan-200 dark:border-cyan-800/50 flex-shrink-0">
-                                            {student.batch}
-                                        </span>
-                                    )}
+                                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                                    <div className="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-slate-800/60 text-slate-500 group-hover:text-emerald-600 dark:group-hover:text-emerald-500 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-500/10 transition-colors flex-shrink-0">
+                                        <User size={16} />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <div className="text-sm font-bold font-sans text-slate-900 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors truncate">
+                                            {student.name}
+                                        </div>
+                                        <div className="text-xs font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5 truncate">
+                                            <Hash size={10} className="flex-shrink-0" />
+                                            <span className="truncate">{student.rollNo}</span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="text-xs text-slate-500 font-mono tracking-wide">{student.rollNo}</div>
+
+                                {student.batch && (
+                                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 flex-shrink-0">
+                                        Batch {student.batch}
+                                    </span>
+                                )}
                             </div>
                         ))}
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div >
+        </div>
     );
 };
 
