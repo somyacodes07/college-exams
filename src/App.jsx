@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { flushSync } from 'react-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Github, Instagram, Sun, Moon, Database, Users, Calendar, HelpCircle } from 'lucide-react';
 import { Analytics } from '@vercel/analytics/react';
 import Search from './components/Search';
@@ -16,6 +15,7 @@ function App() {
   const [studentCount, setStudentCount] = useState(0);
   const [syncVersion, setSyncVersion] = useState(0);
   const [dbStatus, setDbStatus] = useState('connecting'); // connecting | online | offline
+  const [animatingRipple, setAnimatingRipple] = useState(null);
 
   const [theme, setTheme] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -48,8 +48,10 @@ function App() {
     fetchStats();
   }, [selectedStudent]);
 
-  // Ultra-Accurate & Smooth Circular View Transition Originating from Button Center
+  // Guaranteed 100% Universal Circular Wipe Theme Animation Originating from Button Center
   const toggleTheme = (e) => {
+    if (animatingRipple) return;
+
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
 
     // Calculate EXACT geometric center of the theme toggle button element
@@ -62,42 +64,49 @@ function App() {
       Math.max(y, window.innerHeight - y)
     );
 
-    if (!document.startViewTransition) {
-      setTheme(nextTheme);
-      return;
-    }
-
-    const transition = document.startViewTransition(() => {
-      flushSync(() => {
-        setTheme(nextTheme);
-        const root = window.document.documentElement;
-        if (nextTheme === 'dark') {
-          root.classList.add('dark');
-        } else {
-          root.classList.remove('dark');
-        }
-      });
-    });
-
-    transition.ready.then(() => {
-      document.documentElement.animate(
-        {
-          clipPath: [
-            `circle(0px at ${x}px ${y}px)`,
-            `circle(${endRadius}px at ${x}px ${y}px)`,
-          ],
-        },
-        {
-          duration: 600,
-          easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
-          pseudoElement: '::view-transition-new(root)',
-        }
-      );
+    setAnimatingRipple({
+      x,
+      y,
+      endRadius,
+      targetTheme: nextTheme,
     });
   };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 font-sans selection:bg-emerald-500/30 relative cyber-grid overflow-x-hidden">
+      {/* Universal 360-Degree Circular Theme Wipe Overlay */}
+      <AnimatePresence>
+        {animatingRipple && (
+          <motion.div
+            key="theme-circle-wipe"
+            initial={{
+              clipPath: `circle(0px at ${animatingRipple.x}px ${animatingRipple.y}px)`,
+            }}
+            animate={{
+              clipPath: `circle(${animatingRipple.endRadius}px at ${animatingRipple.x}px ${animatingRipple.y}px)`,
+            }}
+            transition={{
+              duration: 0.6,
+              ease: [0.22, 1, 0.36, 1], // Smooth quintic-out easing curve
+            }}
+            onAnimationComplete={() => {
+              setTheme(animatingRipple.targetTheme);
+              setAnimatingRipple(null);
+            }}
+            className={`fixed inset-0 z-[99999] pointer-events-none ${
+              animatingRipple.targetTheme === 'dark'
+                ? 'dark bg-[#0b0f19] text-slate-100 cyber-grid'
+                : 'bg-slate-50 text-slate-900 cyber-grid'
+            }`}
+          >
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+              <Spotlight fill="#10b981" className="-top-40 left-1/4 opacity-20 dark:opacity-40" />
+              <Spotlight fill="#06b6d4" className="top-1/2 -right-40 opacity-20 dark:opacity-40" />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Ambient Spotlight */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <Spotlight fill="#10b981" className="-top-40 left-1/4 opacity-20 dark:opacity-40" />
