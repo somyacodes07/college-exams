@@ -6,8 +6,13 @@ import { isExamCompleted } from '../utils/dateUtils';
 import tutVideo from '../assets/tut.mp4';
 
 const itemVariants = {
-    hidden: { opacity: 0, y: 15 },
-    show: { opacity: 1, y: 0 }
+    hidden: { opacity: 0, y: 20, scale: 0.96 },
+    show: { 
+        opacity: 1, 
+        y: 0, 
+        scale: 1,
+        transition: { type: "spring", stiffness: 350, damping: 25 }
+    }
 };
 
 const formatKeyName = (key) => {
@@ -18,20 +23,20 @@ const formatKeyName = (key) => {
 const ExamItem = ({ exam, type }) => {
     const isTheory = type === 'theory';
     const completed = isExamCompleted(exam);
-    const accentColor = completed 
-        ? 'text-rose-500 dark:text-rose-400'
+    const accentColor = completed
+        ? 'text-emerald-600 dark:text-emerald-400'
         : isTheory 
             ? 'text-purple-600 dark:text-purple-400' 
             : 'text-emerald-600 dark:text-emerald-400';
             
     const borderHover = completed
-        ? 'border-rose-300 dark:border-rose-500/30 bg-rose-50/30 dark:bg-rose-950/20'
+        ? 'border-emerald-500/20 dark:border-emerald-500/20 bg-slate-50/70 dark:bg-slate-900/40 hover:border-emerald-500/40'
         : isTheory 
             ? 'hover:border-purple-500/40 hover:shadow-md dark:hover:shadow-[0_0_25px_-5px_rgba(168,85,247,0.25)]' 
             : 'hover:border-emerald-500/40 hover:shadow-md dark:hover:shadow-[0_0_25px_-5px_rgba(16,185,129,0.25)]';
             
     const badgeBg = completed
-        ? 'bg-rose-100 dark:bg-rose-500/10 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-500/20'
+        ? 'bg-emerald-500/5 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20'
         : isTheory
             ? 'bg-purple-100 dark:bg-purple-500/10 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-500/20'
             : 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/20';
@@ -50,30 +55,25 @@ const ExamItem = ({ exam, type }) => {
     return (
         <motion.div
             variants={itemVariants}
-            className={`group relative overflow-hidden bg-white dark:bg-[#0f1422]/90 text-left rounded-2xl p-4 sm:p-5 border border-slate-200/90 dark:border-white/10 ${borderHover} transition-all duration-300 backdrop-blur-xl shadow-sm dark:shadow-none ${completed ? 'opacity-85' : ''}`}
+            whileHover={{ scale: 1.015, y: -2 }}
+            whileTap={{ scale: 0.99. }}
+            transition={{ duration: 0.2 }}
+            className={`group relative overflow-hidden bg-white dark:bg-[#0f1422]/90 text-left rounded-2xl p-4 sm:p-5 border border-slate-200/90 dark:border-white/10 ${borderHover} transition-all duration-300 backdrop-blur-xl shadow-sm dark:shadow-none`}
         >
-            {/* Red SVG Cross Overlay for Completed Exam */}
+            {/* Green Completed Badge (Top-Right) */}
             {completed && (
-                <>
-                    <svg 
-                        className="absolute inset-0 w-full h-full pointer-events-none z-20 text-rose-500/60 dark:text-rose-500/50" 
-                        preserveAspectRatio="none"
-                        viewBox="0 0 100 100"
-                    >
-                        <line x1="0" y1="0" x2="100" y2="100" stroke="currentColor" strokeWidth="2.5" strokeDasharray="5 3" />
-                        <line x1="100" y1="0" x2="0" y2="100" stroke="currentColor" strokeWidth="2.5" strokeDasharray="5 3" />
-                    </svg>
-                    <div className="absolute top-3 right-3 z-30 flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-rose-500 text-white shadow-md uppercase tracking-wider">
-                        <X size={12} strokeWidth={3} />
-                        <span>Completed</span>
-                    </div>
-                </>
+                <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-mono font-bold bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 dark:border-emerald-500/40 shadow-xs uppercase tracking-wider backdrop-blur-md">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
+                    <Check size={12} className="stroke-[3] text-emerald-600 dark:text-emerald-400" />
+                    <span>COMPLETED</span>
+                </div>
             )}
 
-            <div className="flex flex-col gap-3.5 relative z-10">
+            {/* Content Container - Blurry when completed, unblurs on hover */}
+            <div className={`flex flex-col gap-3.5 relative z-10 transition-all duration-500 ${completed ? 'blur-[1.2px] group-hover:blur-none opacity-80 group-hover:opacity-100' : ''}`}>
                 {/* Subject Header */}
-                <div className="flex flex-col gap-2 pr-20">
-                    <h4 className={`text-base sm:text-lg md:text-xl font-bold font-heading ${completed ? 'text-slate-600 dark:text-slate-300 line-through decoration-rose-500/70 decoration-2' : 'text-slate-900 dark:text-white'} leading-snug ${isTheory ? 'group-hover:text-purple-600 dark:group-hover:text-purple-400' : 'group-hover:text-emerald-600 dark:group-hover:text-emerald-400'} transition-colors`}>
+                <div className="flex flex-col gap-2 pr-28">
+                    <h4 className={`text-base sm:text-lg md:text-xl font-bold font-heading ${completed ? 'text-slate-800 dark:text-slate-200 opacity-65 group-hover:opacity-100' : 'text-slate-900 dark:text-white'} leading-snug ${isTheory ? 'group-hover:text-purple-600 dark:group-hover:text-purple-400' : 'group-hover:text-emerald-600 dark:group-hover:text-emerald-400'} transition-all`}>
                         {exam.subject}
                     </h4>
 
@@ -108,11 +108,11 @@ const ExamItem = ({ exam, type }) => {
 
                 {/* Date & Time Badges */}
                 <div className="flex flex-wrap gap-2 text-xs font-mono">
-                    <div className={`flex items-center gap-1.5 ${completed ? 'bg-rose-100/60 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-500/20' : 'bg-slate-100 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/5'} px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl border`}>
+                    <div className={`flex items-center gap-1.5 ${completed ? 'bg-emerald-500/5 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/20' : 'bg-slate-100 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/5'} px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl border`}>
                         <Calendar size={13} className={accentColor} />
                         <span>{exam.date ? exam.date.replace(/^Day \d+:\s*/, '') : 'NA'}</span>
                     </div>
-                    <div className={`flex items-center gap-1.5 ${completed ? 'bg-rose-100/60 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-500/20' : 'bg-slate-100 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/5'} px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl border`}>
+                    <div className={`flex items-center gap-1.5 ${completed ? 'bg-emerald-500/5 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/20' : 'bg-slate-100 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/5'} px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl border`}>
                         <Clock size={13} className={accentColor} />
                         <span>{exam.time || 'NA'}</span>
                     </div>
