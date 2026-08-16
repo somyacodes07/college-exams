@@ -173,6 +173,11 @@ const ScheduleCard = ({ student }) => {
                                     Batch {student.batch}
                                 </span>
                             )}
+                            {student.cohort && (
+                                <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[11px] sm:text-xs font-mono font-bold bg-purple-100 dark:bg-purple-500/10 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-500/20">
+                                    Cohort: {student.cohort}
+                                </span>
+                            )}
                         </div>
 
                         {/* PROMINENT HUGE ROLL NUMBER BADGE */}

@@ -165,11 +165,18 @@ const Search = ({ onSelectStudent }) => {
                                     </div>
                                 </div>
 
-                                {student.batch && (
-                                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 flex-shrink-0">
-                                        Batch {student.batch}
-                                    </span>
-                                )}
+                                <div className="flex items-center gap-1.5 flex-shrink-0">
+                                    {student.batch && (
+                                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
+                                            Batch {student.batch}
+                                        </span>
+                                    )}
+                                    {student.cohort && (
+                                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-purple-100 dark:bg-purple-500/10 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-500/20">
+                                            {student.cohort}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         ))}
                     </motion.div>
