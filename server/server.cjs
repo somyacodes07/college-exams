@@ -232,6 +232,7 @@ app.use(connectDB);
 // Get search index of all students (lightweight)
 app.get('/api/students/search-index', async (req, res) => {
   try {
+    res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=86400');
     const students = await Student.find({}, 'name rollNo batch cohort').lean();
     res.json(students);
   } catch (error) {
@@ -252,12 +253,13 @@ app.get('/api/students/search', async (req, res) => {
     // Escape regex special characters
     const escapedQuery = searchQuery.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
 
+    res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=3600');
     const students = await Student.find({
       $or: [
         { name: { $regex: escapedQuery, $options: 'i' } },
         { rollNo: { $regex: escapedQuery, $options: 'i' } }
       ]
-    }).limit(10);
+    }).limit(10).lean();
 
     res.json(students);
   } catch (error) {
@@ -274,7 +276,8 @@ app.get('/api/students/roll/:rollNo', async (req, res) => {
       return res.status(400).json({ error: 'Roll number must be a valid string' });
     }
 
-    const student = await Student.findOne({ rollNo: String(rollNo) });
+    res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=86400');
+    const student = await Student.findOne({ rollNo: String(rollNo) }).lean();
     if (!student) {
       return res.status(404).json({ error: 'Student not found' });
     }

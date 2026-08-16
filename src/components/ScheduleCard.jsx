@@ -195,7 +195,7 @@ const ScheduleCard = ({ student }) => {
                         title="Export schedule to calendar file"
                     >
                         <Calendar size={14} className="text-emerald-600 dark:text-emerald-400" />
-                        <span>Export Calendar (.ics)</span>
+                        <span>Add to Calendar</span>
                     </motion.button>
                 </div>
             </div>
@@ -241,12 +241,12 @@ const ScheduleCard = ({ student }) => {
                                 <Code size={20} className="sm:w-5 sm:h-5" />
                             </div>
                             <div>
-                                <h3 className="text-lg sm:text-xl font-bold font-heading text-slate-900 dark:text-white">Practical Schedule</h3>
-                                <p className="text-[11px] sm:text-xs text-slate-500 font-mono">Lab Vivas & Projects</p>
+                                <h3 className="text-lg sm:text-xl font-bold font-heading text-slate-900 dark:text-white">Practical Viva</h3>
+                                <p className="text-[11px] sm:text-xs text-slate-500 font-mono">Lab & Examiner Evaluation</p>
                             </div>
                         </div>
                         <span className="text-[10px] sm:text-xs font-mono font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 flex-shrink-0">
-                            {practicalExams.length} Labs
+                            {practicalExams.length} Slots
                         </span>
                     </div>
 
@@ -280,20 +280,20 @@ const ScheduleCard = ({ student }) => {
                             Optional calendar sync for Google Calendar, Apple Calendar, or Outlook.
                         </p>
                         <ol className="text-xs font-mono text-slate-600 dark:text-slate-400 space-y-1.5 list-decimal list-inside bg-slate-50 dark:bg-slate-900/60 p-3.5 sm:p-4 rounded-2xl border border-slate-200/60 dark:border-white/5">
-                            <li>Click <strong>Export Calendar</strong> button</li>
+                            <li>Click <strong>Add to Calendar</strong> button</li>
                             <li>Open the downloaded <code className="text-emerald-600 dark:text-emerald-400">.ics</code> file</li>
                             <li>Confirm <strong>Add All</strong> in your calendar app</li>
                         </ol>
                     </div>
 
                     <motion.button
-                        whileHover={{ scale: 1.03 }}
-                        whileTap={{ scale: 0.97 }}
+                        whileHover={{ scale: 1.04 }}
+                        whileTap={{ scale: 0.96 }}
                         onClick={handleExport}
-                        className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl transition-all border border-slate-200 dark:border-white/10 flex items-center justify-center gap-2 text-xs active:scale-95"
+                        className="w-full md:w-auto px-6 py-3.5 sm:px-8 sm:py-4 bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white font-extrabold rounded-2xl transition-all shadow-xl shadow-emerald-600/30 dark:shadow-emerald-500/30 flex items-center justify-center gap-3 text-sm sm:text-base cursor-pointer active:scale-95"
                     >
-                        <Download size={14} />
-                        <span>Export (.ics)</span>
+                        <Calendar size={20} className="text-white" />
+                        <span>Add to Calendar</span>
                     </motion.button>
                 </div>
 
