@@ -54,8 +54,9 @@ const Search = ({ onSelectStudent }) => {
         const normalizedQuery = query.trim().toLowerCase();
         const filtered = searchIndex.filter(student => 
             (student.name && student.name.toLowerCase().includes(normalizedQuery)) ||
-            (student.rollNo && student.rollNo.toLowerCase().includes(normalizedQuery))
-        ).slice(0, 8);
+            (student.rollNo && student.rollNo.toLowerCase().includes(normalizedQuery)) ||
+            (student.cohort && student.cohort.toLowerCase().includes(normalizedQuery))
+        ).slice(0, 15);
 
         setSuggestions(filtered);
     }, [query, searchIndex]);
