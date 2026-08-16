@@ -56,7 +56,7 @@ const ExamItem = ({ exam, type }) => {
         <motion.div
             variants={itemVariants}
             whileHover={{ scale: 1.015, y: -2 }}
-            whileTap={{ scale: 0.99. }}
+            whileTap={{ scale: 0.99 }}
             transition={{ duration: 0.2 }}
             className={`group relative overflow-hidden bg-white dark:bg-[#0f1422]/90 text-left rounded-2xl p-4 sm:p-5 border border-slate-200/90 dark:border-white/10 ${borderHover} transition-all duration-300 backdrop-blur-xl shadow-sm dark:shadow-none`}
         >
