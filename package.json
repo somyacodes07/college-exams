@@ -9,6 +9,7 @@
     "dev": "concurrently \"npm run dev:frontend\" \"npm run server\"",
     "build": "vite build",
     "lint": "eslint .",
+    "test": "node tests/examUtils.test.cjs",
     "preview": "vite preview",
     "db:seed": "node server/seed.cjs",
     "db:sync-check": "node scripts/sync_check_update.cjs"
