@@ -232,7 +232,7 @@ app.use(connectDB);
 // Get search index of all students (lightweight)
 app.get('/api/students/search-index', async (req, res) => {
   try {
-    const students = await Student.find({}, 'name rollNo batch').lean();
+    const students = await Student.find({}, 'name rollNo batch cohort').lean();
     res.json(students);
   } catch (error) {
     console.error('Error getting search index:', error);
