@@ -6,13 +6,8 @@ import { isExamCompleted } from '../utils/dateUtils';
 import tutVideo from '../assets/tut.mp4';
 
 const itemVariants = {
-    hidden: { opacity: 0, y: 20, scale: 0.96 },
-    show: { 
-        opacity: 1, 
-        y: 0, 
-        scale: 1,
-        transition: { type: "spring", stiffness: 350, damping: 25 }
-    }
+    hidden: { opacity: 0, y: 12 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.15, ease: "easeOut" } }
 };
 
 const formatKeyName = (key) => {
@@ -55,10 +50,7 @@ const ExamItem = ({ exam, type }) => {
     return (
         <motion.div
             variants={itemVariants}
-            whileHover={{ scale: 1.015, y: -2 }}
-            whileTap={{ scale: 0.99 }}
-            transition={{ duration: 0.2 }}
-            className={`group relative overflow-hidden bg-white dark:bg-[#0f1422]/90 text-left rounded-2xl p-4 sm:p-5 border border-slate-200/90 dark:border-white/10 ${borderHover} transition-all duration-300 backdrop-blur-xl shadow-sm dark:shadow-none`}
+            className={`group relative overflow-hidden bg-white dark:bg-[#0f1422]/90 text-left rounded-2xl p-4 sm:p-5 border border-slate-200/90 dark:border-white/10 ${borderHover} transition-all duration-200 backdrop-blur-xl shadow-sm dark:shadow-none`}
         >
             {/* Green Completed Badge (Top-Right) */}
             {completed && (
@@ -142,11 +134,11 @@ const ScheduleCard = ({ student }) => {
     };
 
     const containerVariants = {
-        hidden: { opacity: 0, y: 20 },
+        hidden: { opacity: 0, y: 15 },
         show: {
             opacity: 1,
             y: 0,
-            transition: { staggerChildren: 0.08 }
+            transition: { staggerChildren: 0.04 }
         }
     };
 
