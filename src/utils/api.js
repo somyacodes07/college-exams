@@ -60,13 +60,23 @@ let searchIndexCache = [];
 
 function initCache(data) {
   if (!Array.isArray(data)) return;
-  const newMap = new Map();
   const newIndex = [];
   
   for (const s of data) {
     if (s && s.rollNo) {
       const rollStr = String(s.rollNo);
-      newMap.set(rollStr, s);
+      const existing = studentCacheMap.get(rollStr);
+      
+      // If incoming record has full exam data OR no existing full record exists, update cache
+      if (s.theory || !existing) {
+        studentCacheMap.set(rollStr, s);
+      } else if (existing) {
+        // Merge metadata updates without wiping theory/practical arrays
+        if (s.cohort !== undefined) existing.cohort = s.cohort;
+        if (s.batch !== undefined) existing.batch = s.batch;
+        if (s.name !== undefined) existing.name = s.name;
+      }
+
       newIndex.push({
         name: s.name,
         rollNo: rollStr,
@@ -76,11 +86,10 @@ function initCache(data) {
     }
   }
   
-  studentCacheMap = newMap;
   searchIndexCache = newIndex;
 }
 
-// Initialize immediately on module load
+// Initialize immediately on module load with full local data
 initCache(localExamData);
 
 // --- Public API Calls (No Auth Required) ---
@@ -107,7 +116,7 @@ export async function searchStudents(query) {
     .then(serverResults => {
       if (Array.isArray(serverResults) && serverResults.length > 0) {
         for (const s of serverResults) {
-          if (s && s.rollNo) studentCacheMap.set(String(s.rollNo), s);
+          if (s && s.rollNo && s.theory) studentCacheMap.set(String(s.rollNo), s);
         }
       }
     })
@@ -122,7 +131,7 @@ export async function searchStudents(query) {
  * @returns {Promise<Array>} - List of student objects for search index.
  */
 export async function getSearchIndex() {
-  // Background update from server
+  // Background update from server (non-blocking)
   fetch(`${API_BASE}/api/students/search-index`)
     .then(res => res.ok ? res.json() : null)
     .then(serverIndex => {
@@ -146,13 +155,29 @@ export async function getStudentByRoll(rollNo) {
   if (!rollNo) return null;
   const rollStr = String(rollNo).trim();
   
-  const cachedStudent = studentCacheMap.get(rollStr);
+  let cachedStudent = studentCacheMap.get(rollStr);
+
+  // If cached student record doesn't exist or lacks theory exams, fetch immediately from server
+  if (!cachedStudent || !cachedStudent.theory) {
+    try {
+      const response = await fetch(`${API_BASE}/api/students/roll/${encodeURIComponent(rollStr)}`);
+      if (response.ok) {
+        const fullStudent = await response.json();
+        if (fullStudent && fullStudent.rollNo) {
+          studentCacheMap.set(rollStr, fullStudent);
+          return fullStudent;
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching student by roll:', err);
+    }
+  }
 
   // Background refresh to update cache if server has updates
   fetch(`${API_BASE}/api/students/roll/${encodeURIComponent(rollStr)}`)
     .then(res => res.ok ? res.json() : null)
     .then(freshStudent => {
-      if (freshStudent && freshStudent.rollNo) {
+      if (freshStudent && freshStudent.rollNo && freshStudent.theory) {
         studentCacheMap.set(String(freshStudent.rollNo), freshStudent);
       }
     })
@@ -194,9 +219,9 @@ export async function verifyPassword(password) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ password })
   });
-  const data = await response.json();
+  const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data.error || 'Password verification failed');
+    throw new Error(data.details || data.error || 'Password verification failed');
   }
   // Store the JWT token — never the password
   if (data.token) {

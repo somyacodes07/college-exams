@@ -17,6 +17,7 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/exam_scheduler';
 const JWT_SECRET = process.env.JWT_SECRET;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const JWT_EXPIRY = '1h'; // 1 hour session tokens
 
 // --- Security Middleware ---
@@ -118,7 +119,7 @@ app.use('/api/', apiRateLimiter);
 function safeComparePassword(input, secret) {
   if (typeof input !== 'string' || typeof secret !== 'string') return false;
   const inputHash = crypto.createHmac('sha256', 'exam-scheduler-compare').update(input.trim()).digest();
-  const secretHash = crypto.createHmac('sha256', 'exam-scheduler-compare').update(secret).digest();
+  const secretHash = crypto.createHmac('sha256', 'exam-scheduler-compare').update(secret.trim()).digest();
   return crypto.timingSafeEqual(inputHash, secretHash);
 }
 
@@ -311,19 +312,11 @@ const { getCsvUrl, fetchCsvText, parseCsvData } = require('./utils/parser.cjs');
 app.post('/api/students/verify-password', adminUploadRateLimiter, async (req, res) => {
   try {
     const { password } = req.body;
-    const adminPassword = process.env.ADMIN_PASSWORD;
-
-    if (!adminPassword) {
-      return res.status(500).json({ error: 'Server Configuration Error: Admin authorization password is not configured on the server.' });
-    }
-
-    if (!JWT_SECRET) {
-      return res.status(500).json({ error: 'Server Configuration Error: JWT_SECRET is not configured on the server.' });
-    }
+    const adminPass = process.env.ADMIN_PASSWORD || ADMIN_PASSWORD;
 
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
-    if (!safeComparePassword(password, adminPassword)) {
+    if (!safeComparePassword(password, adminPass)) {
       const attemptsLeft = recordFailedAttempt(ip);
       return res.status(401).json({ 
         error: 'Unauthorized: Invalid Admin Password',

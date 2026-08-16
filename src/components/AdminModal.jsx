@@ -130,8 +130,7 @@ const AdminModal = ({ isOpen, onClose, onSyncSuccess }) => {
       const savedKey = localStorage.getItem('groqApiKey');
       if (savedKey) setGroqApiKey(savedKey);
     } catch (err) {
-      console.error('Failed to load sync configurations:', err);
-      throw err;
+      console.warn('Could not load sync configuration from server:', err);
     }
   };
 
