@@ -27,6 +27,7 @@ function normalizeStudent(student) {
     rollNo: String(student.rollNo).trim(),
     name: String(student.name).trim(),
     batch: String(student.batch).trim(),
+    cohort: String(student.cohort || '').trim(),
     theory: Array.isArray(student.theory) ? student.theory.map(cleanExam).sort((a, b) => a.subject.localeCompare(b.subject) || a.date.localeCompare(b.date)) : [],
     practical: Array.isArray(student.practical) ? student.practical.map(cleanExam).sort((a, b) => a.subject.localeCompare(b.subject) || a.date.localeCompare(b.date)) : [],
   };

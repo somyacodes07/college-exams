@@ -111,6 +111,10 @@ function parseMapping(csvText) {
     const l = c.toLowerCase();
     return l.includes('name') || l.includes('student');
   });
+  let cohortColIdx = headers.findIndex(c => {
+    const l = c.toLowerCase();
+    return l.includes('cohort');
+  });
 
   if (rollColIdx === -1) rollColIdx = 0;
   if (nameColIdx === -1) nameColIdx = 1;
@@ -121,6 +125,7 @@ function parseMapping(csvText) {
     if (cols.length > Math.max(rollColIdx, nameColIdx)) {
       const rollNo = cols[rollColIdx].trim();
       const name = cols[nameColIdx].trim();
+      const cohort = (cohortColIdx !== -1 && cols[cohortColIdx]) ? cols[cohortColIdx].trim() : '';
       
       const isHeaderLabel = rollNo.toLowerCase().includes('roll') || 
                             rollNo.toLowerCase().includes('sr. no') || 
@@ -131,6 +136,7 @@ function parseMapping(csvText) {
         students.set(rollNo, {
           rollNo,
           name,
+          cohort,
           theory: [],
           practical: []
         });
