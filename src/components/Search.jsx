@@ -9,7 +9,9 @@ const Search = ({ onSelectStudent }) => {
     const [suggestions, setSuggestions] = useState([]);
     const [isFocused, setIsFocused] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [selectedIndex, setSelectedIndex] = useState(-1);
     const inputRef = useRef(null);
+    const listRef = useRef(null);
 
     useEffect(() => {
         let active = true;
@@ -30,19 +32,20 @@ const Search = ({ onSelectStudent }) => {
     }, []);
 
     useEffect(() => {
-        const handleKeyDown = (e) => {
+        const handleGlobalKeyDown = (e) => {
             if ((e.key === '/' || (e.metaKey && e.key === 'k') || (e.ctrlKey && e.key === 'k')) && document.activeElement !== inputRef.current) {
                 e.preventDefault();
                 inputRef.current?.focus();
             }
         };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
+        window.addEventListener('keydown', handleGlobalKeyDown);
+        return () => window.removeEventListener('keydown', handleGlobalKeyDown);
     }, []);
 
     useEffect(() => {
         if (query.trim().length < 2) {
             setSuggestions([]);
+            setSelectedIndex(-1);
             return;
         }
 
@@ -54,11 +57,14 @@ const Search = ({ onSelectStudent }) => {
         ).slice(0, 15);
 
         setSuggestions(filtered);
+        setSelectedIndex(-1);
     }, [query, searchIndex]);
 
     const handleSelect = async (student) => {
+        if (!student) return;
         setQuery(student.name);
         setSuggestions([]);
+        setSelectedIndex(-1);
         setIsLoading(true);
         try {
             const fullStudent = await getStudentByRoll(student.rollNo);
@@ -69,6 +75,29 @@ const Search = ({ onSelectStudent }) => {
             console.error('Failed to fetch full student details:', err);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleInputKeyDown = (e) => {
+        if (!suggestions || suggestions.length === 0) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setSelectedIndex(prev => (prev + 1) % suggestions.length);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setSelectedIndex(prev => (prev - 1 + suggestions.length) % suggestions.length);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            const target = selectedIndex >= 0 ? suggestions[selectedIndex] : suggestions[0];
+            if (target) {
+                handleSelect(target);
+                inputRef.current?.blur();
+            }
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            setIsFocused(false);
+            inputRef.current?.blur();
         }
     };
 
@@ -95,21 +124,23 @@ const Search = ({ onSelectStudent }) => {
                     type="text"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={handleInputKeyDown}
                     onFocus={() => setIsFocused(true)}
                     onBlur={() => setTimeout(() => setIsFocused(false), 200)}
                     placeholder="Search Name or Roll Number..."
                     className="w-full bg-transparent text-slate-900 dark:text-white font-sans text-base px-2.5 sm:px-3 py-3.5 sm:py-4 outline-none placeholder-slate-400 dark:placeholder-slate-500 min-h-[48px]"
                 />
 
-                <div className="flex items-center gap-1.5 pr-3 sm:pr-4">
+                <div className="flex items-center gap-1.5 pr-2 sm:pr-3">
                     {query ? (
                         <button
                             onClick={() => {
                                 setQuery('');
                                 setSuggestions([]);
+                                setSelectedIndex(-1);
                                 onSelectStudent(null);
                             }}
-                            className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors active:scale-95"
+                            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors active:scale-95"
                             title="Clear search"
                         >
                             <X size={18} />
@@ -127,54 +158,73 @@ const Search = ({ onSelectStudent }) => {
             <AnimatePresence>
                 {suggestions.length > 0 && isFocused && (
                     <motion.div
+                        ref={listRef}
                         initial={{ opacity: 0, y: -8, scale: 0.98 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -8, scale: 0.98 }}
                         transition={{ duration: 0.2 }}
-                        className="absolute top-full left-1 right-1 sm:left-0 sm:right-0 mt-2.5 bg-white dark:bg-[#0c101c]/95 border border-slate-200/90 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-2xl max-h-64 sm:max-h-72 overflow-y-auto z-50 divide-y divide-slate-100 dark:divide-white/5"
+                        className="absolute top-full left-1 right-1 sm:left-0 sm:right-0 mt-2.5 bg-white dark:bg-[#0c101c]/95 border border-slate-200/90 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-2xl max-h-[48vh] sm:max-h-80 overflow-y-auto z-50 divide-y divide-slate-100 dark:divide-white/5"
                     >
-                        <div className="px-3.5 sm:px-4 py-2 bg-slate-50 dark:bg-slate-900/40 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center justify-between border-b border-slate-200/60 dark:border-white/5">
+                        <div className="px-3.5 sm:px-4 py-2 bg-slate-50 dark:bg-slate-900/40 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center justify-between border-b border-slate-200/60 dark:border-white/5 sticky top-0 backdrop-blur-md z-10">
                             <span>Matches ({suggestions.length})</span>
-                            <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-500">
-                                <Sparkles size={10} /> Instant lookup
+                            <span className="hidden sm:flex items-center gap-1.5 text-slate-400 font-normal">
+                                <span>Navigate with ↑ ↓ ↵</span>
+                            </span>
+                            <span className="flex sm:hidden items-center gap-1 text-emerald-600 dark:text-emerald-500">
+                                <Sparkles size={10} /> Instant
                             </span>
                         </div>
 
-                        {suggestions.map((student) => (
-                            <div
-                                key={student.rollNo}
-                                onClick={() => handleSelect(student)}
-                                className="px-4 sm:px-5 py-3 sm:py-3.5 hover:bg-slate-100 dark:hover:bg-emerald-500/10 active:bg-slate-200 dark:active:bg-emerald-500/20 cursor-pointer transition-all flex items-center justify-between gap-2 group"
-                            >
-                                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                                    <div className="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-slate-800/60 text-slate-500 group-hover:text-emerald-600 dark:group-hover:text-emerald-500 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-500/10 transition-colors flex-shrink-0">
-                                        <User size={16} />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <div className="text-sm font-bold font-sans text-slate-900 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors truncate">
-                                            {student.name}
+                        {suggestions.map((student, idx) => {
+                            const isSelected = selectedIndex === idx;
+                            return (
+                                <div
+                                    key={student.rollNo}
+                                    onClick={() => handleSelect(student)}
+                                    className={`px-4 sm:px-5 py-3 sm:py-3.5 min-h-[52px] cursor-pointer transition-all flex items-center justify-between gap-2 group ${
+                                        isSelected 
+                                            ? 'bg-emerald-50 dark:bg-emerald-500/15 border-l-4 border-emerald-500' 
+                                            : 'hover:bg-slate-100 dark:hover:bg-emerald-500/10 active:bg-slate-200 dark:active:bg-emerald-500/20'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                                        <div className={`p-1.5 sm:p-2 rounded-xl transition-colors flex-shrink-0 ${
+                                            isSelected 
+                                                ? 'bg-emerald-200 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300' 
+                                                : 'bg-slate-100 dark:bg-slate-800/60 text-slate-500 group-hover:text-emerald-600 dark:group-hover:text-emerald-500 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-500/10'
+                                        }`}>
+                                            <User size={16} />
                                         </div>
-                                        <div className="text-xs font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5 truncate">
-                                            <Hash size={10} className="flex-shrink-0" />
-                                            <span className="truncate">{student.rollNo}</span>
+                                        <div className="min-w-0">
+                                            <div className={`text-sm font-bold font-sans transition-colors truncate ${
+                                                isSelected 
+                                                    ? 'text-emerald-700 dark:text-emerald-300' 
+                                                    : 'text-slate-900 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400'
+                                            }`}>
+                                                {student.name}
+                                            </div>
+                                            <div className="text-xs font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5 truncate">
+                                                <Hash size={10} className="flex-shrink-0" />
+                                                <span className="truncate">{student.rollNo}</span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div className="flex items-center gap-1.5 flex-shrink-0">
-                                    {student.batch && (
-                                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
-                                            Batch {student.batch}
-                                        </span>
-                                    )}
-                                    {student.cohort && (
-                                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-purple-100 dark:bg-purple-500/10 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-500/20">
-                                            {student.cohort}
-                                        </span>
-                                    )}
+                                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                                        {student.batch && (
+                                            <span className="text-[10px] font-mono font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
+                                                Batch {student.batch}
+                                            </span>
+                                        )}
+                                        {student.cohort && (
+                                            <span className="hidden sm:inline text-[10px] font-mono font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-purple-100 dark:bg-purple-500/10 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-500/20">
+                                                {student.cohort}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </motion.div>
                 )}
             </AnimatePresence>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Calendar, Clock, BookOpen, Code, AlertCircle, MapPin, Download, User as PersonIcon, Copy, Check, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Calendar, Clock, BookOpen, Code, AlertCircle, MapPin, User as PersonIcon, Copy, Check, Play, ChevronDown, ChevronUp } from 'lucide-react';
 import { generateICS, downloadICS } from '../utils/icsGenerator';
 import { isExamCompleted } from '../utils/dateUtils';
 import tutVideo from '../assets/tut.mp4';
@@ -52,22 +52,24 @@ const ExamItem = ({ exam, type }) => {
             variants={itemVariants}
             className={`group relative overflow-hidden bg-white dark:bg-[#0f1422]/90 text-left rounded-2xl p-4 sm:p-5 border border-slate-200/90 dark:border-white/10 ${borderHover} transition-all duration-200 backdrop-blur-xl shadow-sm dark:shadow-none`}
         >
-            {/* Green Completed Badge (Top-Right) */}
-            {completed && (
-                <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-mono font-bold bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 dark:border-emerald-500/40 shadow-xs uppercase tracking-wider backdrop-blur-md">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
-                    <Check size={12} className="stroke-[3] text-emerald-600 dark:text-emerald-400" />
-                    <span>COMPLETED</span>
-                </div>
-            )}
+            {/* Content Container - Subtle opacity when completed, unblurs on hover */}
+            <div className={`flex flex-col gap-3.5 relative z-10 transition-all duration-300 ${completed ? 'opacity-85 hover:opacity-100' : ''}`}>
+                {/* Subject Header & Badges */}
+                <div className="flex flex-col gap-2.5">
+                    <div className="flex items-start justify-between gap-3">
+                        <h4 className={`text-base sm:text-lg md:text-xl font-bold font-heading ${completed ? 'text-slate-700 dark:text-slate-300' : 'text-slate-900 dark:text-white'} leading-snug ${isTheory ? 'group-hover:text-purple-600 dark:group-hover:text-purple-400' : 'group-hover:text-emerald-600 dark:group-hover:text-emerald-400'} transition-colors flex-1 min-w-0 break-words`}>
+                            {exam.subject}
+                        </h4>
 
-            {/* Content Container - Blurry when completed, unblurs on hover */}
-            <div className={`flex flex-col gap-3.5 relative z-10 transition-all duration-500 ${completed ? 'blur-[1.2px] group-hover:blur-none opacity-80 group-hover:opacity-100' : ''}`}>
-                {/* Subject Header */}
-                <div className="flex flex-col gap-2 pr-28">
-                    <h4 className={`text-base sm:text-lg md:text-xl font-bold font-heading ${completed ? 'text-slate-800 dark:text-slate-200 opacity-65 group-hover:opacity-100' : 'text-slate-900 dark:text-white'} leading-snug ${isTheory ? 'group-hover:text-purple-600 dark:group-hover:text-purple-400' : 'group-hover:text-emerald-600 dark:group-hover:text-emerald-400'} transition-all`}>
-                        {exam.subject}
-                    </h4>
+                        {/* Completed Badge (Responsive inline flex) */}
+                        {completed && (
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-mono font-bold bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 dark:border-emerald-500/40 shadow-xs uppercase tracking-wider backdrop-blur-md flex-shrink-0">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
+                                <Check size={12} className="stroke-[3] text-emerald-600 dark:text-emerald-400" />
+                                <span>COMPLETED</span>
+                            </div>
+                        )}
+                    </div>
 
                     <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                         {exam.location && exam.location !== 'TBD' && exam.location.trim().toLowerCase() !== (exam.panel || '').trim().toLowerCase() && (
@@ -116,6 +118,8 @@ const ExamItem = ({ exam, type }) => {
 
 const ScheduleCard = ({ student }) => {
     const [isCopied, setIsCopied] = useState(false);
+    const [activeMobileTab, setActiveMobileTab] = useState('all');
+    const [showVideo, setShowVideo] = useState(false);
 
     if (!student) return null;
 
@@ -172,38 +176,75 @@ const ScheduleCard = ({ student }) => {
                             )}
                         </div>
 
-                        {/* PROMINENT HUGE ROLL NUMBER BADGE */}
+                        {/* PROMINENT ROLL NUMBER BADGE WITH TOUCH-FRIENDLY COPY */}
                         <div className="inline-flex items-center gap-2.5 px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl bg-emerald-100/80 dark:bg-emerald-500/15 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-mono text-xl sm:text-2xl md:text-3xl font-black tracking-wider shadow-sm">
                             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
-                            <span>{student.rollNo}</span>
+                            <span className="select-all">{student.rollNo}</span>
                             <button
                                 onClick={handleCopyRoll}
-                                className="ml-1 p-1.5 hover:bg-emerald-200 dark:hover:bg-emerald-500/20 rounded-xl transition-colors text-emerald-700 dark:text-emerald-400 active:scale-95"
+                                className="ml-1 min-w-[36px] min-h-[36px] flex items-center justify-center hover:bg-emerald-200 dark:hover:bg-emerald-500/20 rounded-xl transition-colors text-emerald-700 dark:text-emerald-400 active:scale-90"
                                 title="Copy Roll Number"
+                                aria-label="Copy Roll Number"
                             >
                                 {isCopied ? <Check size={18} className="text-emerald-600 dark:text-emerald-400" /> : <Copy size={18} />}
                             </button>
                         </div>
                     </div>
 
-                    {/* DISCREET COMPACT CALENDAR BUTTON */}
+                    {/* COMPACT CALENDAR BUTTON */}
                     <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={handleExport}
-                        className="px-3.5 py-2 sm:px-4 sm:py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl transition-all border border-slate-200 dark:border-white/10 flex items-center gap-2 text-xs whitespace-nowrap active:scale-95 self-center md:self-start"
+                        className="px-4 py-2.5 sm:px-5 sm:py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-2xl transition-all border border-slate-200 dark:border-white/10 flex items-center gap-2 text-xs sm:text-sm whitespace-nowrap active:scale-95 self-center md:self-start min-h-[44px]"
                         title="Export schedule to calendar file"
                     >
-                        <Calendar size={14} className="text-emerald-600 dark:text-emerald-400" />
+                        <Calendar size={16} className="text-emerald-600 dark:text-emerald-400" />
                         <span>Add to Calendar</span>
                     </motion.button>
                 </div>
             </div>
 
-            {/* Theory vs Practical Split Layout */}
+            {/* Mobile-Only Segmented Tabs (Hidden on PC/lg screens) */}
+            <div className="flex lg:hidden items-center justify-center p-1 bg-slate-100 dark:bg-[#0c101c]/90 rounded-2xl border border-slate-200/90 dark:border-white/10 max-w-sm mx-auto shadow-inner">
+                <button
+                    onClick={() => setActiveMobileTab('all')}
+                    className={`flex-1 py-2 px-2.5 text-xs font-mono font-bold rounded-xl transition-all min-h-[38px] ${
+                        activeMobileTab === 'all'
+                            ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
+                            : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                >
+                    All ({theoryExams.length + practicalExams.length})
+                </button>
+                <button
+                    onClick={() => setActiveMobileTab('theory')}
+                    className={`flex-1 py-2 px-2.5 text-xs font-mono font-bold rounded-xl transition-all min-h-[38px] ${
+                        activeMobileTab === 'theory'
+                            ? 'bg-purple-600 text-white shadow-sm'
+                            : 'text-slate-500 hover:text-purple-600 dark:hover:text-purple-400'
+                    }`}
+                >
+                    Theory ({theoryExams.length})
+                </button>
+                <button
+                    onClick={() => setActiveMobileTab('practical')}
+                    className={`flex-1 py-2 px-2.5 text-xs font-mono font-bold rounded-xl transition-all min-h-[38px] ${
+                        activeMobileTab === 'practical'
+                            ? 'bg-emerald-600 text-white shadow-sm'
+                            : 'text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400'
+                    }`}
+                >
+                    Practical ({practicalExams.length})
+                </button>
+            </div>
+
+            {/* Theory vs Practical Split Layout (Side-by-side on PC, Tabbed/Stacked on Mobile) */}
             <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 items-start">
                 {/* Theory Section */}
-                <div className="flex flex-col h-full bg-white dark:bg-[#0c101c]/50 rounded-3xl p-5 sm:p-6 border border-slate-200/90 dark:border-white/10 backdrop-blur-xl shadow-sm dark:shadow-none">
+                <div className={`flex-col h-full bg-white dark:bg-[#0c101c]/50 rounded-3xl p-5 sm:p-6 border border-slate-200/90 dark:border-white/10 backdrop-blur-xl shadow-sm dark:shadow-none ${
+                    activeMobileTab === 'practical' ? 'hidden lg:flex' : 'flex'
+                }`}>
                     <div className="flex items-center justify-between mb-5 sm:mb-6 pb-3.5 sm:pb-4 border-b border-slate-200/60 dark:border-white/5">
                         <div className="flex items-center gap-2.5 sm:gap-3">
                             <div className="p-2 sm:p-2.5 bg-purple-100 dark:bg-purple-500/10 rounded-2xl border border-purple-200 dark:border-purple-500/20 text-purple-600 dark:text-purple-400 flex-shrink-0">
@@ -234,7 +275,9 @@ const ScheduleCard = ({ student }) => {
                 </div>
 
                 {/* Practical Section */}
-                <div className="flex flex-col h-full bg-white dark:bg-[#0c101c]/50 rounded-3xl p-5 sm:p-6 border border-slate-200/90 dark:border-white/10 backdrop-blur-xl shadow-sm dark:shadow-none">
+                <div className={`flex-col h-full bg-white dark:bg-[#0c101c]/50 rounded-3xl p-5 sm:p-6 border border-slate-200/90 dark:border-white/10 backdrop-blur-xl shadow-sm dark:shadow-none ${
+                    activeMobileTab === 'theory' ? 'hidden lg:flex' : 'flex'
+                }`}>
                     <div className="flex items-center justify-between mb-5 sm:mb-6 pb-3.5 sm:pb-4 border-b border-slate-200/60 dark:border-white/5">
                         <div className="flex items-center gap-2.5 sm:gap-3">
                             <div className="p-2 sm:p-2.5 bg-emerald-100 dark:bg-emerald-500/10 rounded-2xl border border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex-shrink-0">
@@ -290,24 +333,53 @@ const ScheduleCard = ({ student }) => {
                         whileHover={{ scale: 1.04 }}
                         whileTap={{ scale: 0.96 }}
                         onClick={handleExport}
-                        className="w-full md:w-auto px-6 py-3.5 sm:px-8 sm:py-4 bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white font-extrabold rounded-2xl transition-all shadow-xl shadow-emerald-600/30 dark:shadow-emerald-500/30 flex items-center justify-center gap-3 text-sm sm:text-base cursor-pointer active:scale-95"
+                        className="w-full md:w-auto px-6 py-3.5 sm:px-8 sm:py-4 bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white font-extrabold rounded-2xl transition-all shadow-xl shadow-emerald-600/30 dark:shadow-emerald-500/30 flex items-center justify-center gap-3 text-sm sm:text-base cursor-pointer active:scale-95 min-h-[48px]"
                     >
                         <Calendar size={20} className="text-white" />
                         <span>Add to Calendar</span>
                     </motion.button>
                 </div>
 
-                {/* Tutorial Video Frame */}
-                <div className="mt-6 sm:mt-8 rounded-2xl overflow-hidden border border-slate-200/80 dark:border-white/10 shadow-xl bg-slate-900">
-                    <video
-                        src={tutVideo}
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                        preload="metadata"
-                        className="w-full h-auto object-cover opacity-90 hover:opacity-100 transition-opacity"
-                    />
+                {/* Collapsible Video Tutorial (Saves 8.4MB bandwidth on page load) */}
+                <div className="mt-6 sm:mt-8 pt-5 border-t border-slate-200/60 dark:border-white/5">
+                    <button
+                        onClick={() => setShowVideo(prev => !prev)}
+                        className="w-full flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-900 border border-slate-200/80 dark:border-white/5 text-slate-800 dark:text-slate-200 text-xs sm:text-sm font-semibold transition-all group active:scale-[0.99] min-h-[48px]"
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <Play size={14} className="ml-0.5" />
+                            </div>
+                            <div className="text-left">
+                                <div className="font-bold font-sans">Step-by-Step Video Guide</div>
+                                <div className="text-[11px] font-mono text-slate-500 font-normal">
+                                    {showVideo ? 'Click to collapse tutorial video' : 'Click to watch quick tutorial video (8 MB)'}
+                                </div>
+                            </div>
+                        </div>
+                        {showVideo ? <ChevronUp size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
+                    </button>
+
+                    <AnimatePresence>
+                        {showVideo && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className="mt-3.5 rounded-2xl overflow-hidden border border-slate-200/80 dark:border-white/10 shadow-xl bg-slate-900"
+                            >
+                                <video
+                                    src={tutVideo}
+                                    controls
+                                    autoPlay
+                                    playsInline
+                                    preload="auto"
+                                    className="w-full h-auto object-cover opacity-95 hover:opacity-100 transition-opacity"
+                                />
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </motion.div>
         </motion.div>

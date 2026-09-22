@@ -110,7 +110,8 @@ function App() {
             whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.92 }}
             onClick={() => setIsAdminOpen(true)}
-            className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/5 hover:border-emerald-500/50 transition-colors active:scale-95"
+            aria-label="Admin: Sync Database"
+            className="p-2 sm:p-2.5 min-w-[38px] min-h-[38px] flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/5 hover:border-emerald-500/50 transition-colors active:scale-95"
             title="Admin: Sync Database"
           >
             <Database size={16} className="text-emerald-600 dark:text-emerald-400" />
@@ -121,7 +122,8 @@ function App() {
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={toggleTheme}
-            className="p-2.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 hover:border-emerald-500/50 transition-all shadow-sm active:scale-95 relative overflow-hidden"
+            aria-label="Toggle Theme"
+            className="p-2 sm:p-2.5 min-w-[38px] min-h-[38px] flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 hover:border-emerald-500/50 transition-all shadow-sm active:scale-95 relative overflow-hidden"
             title="Toggle Theme"
           >
             <AnimatePresence mode="wait" initial={false}>
@@ -145,7 +147,8 @@ function App() {
             href="https://github.com/somyacodes07"
             target="_blank"
             rel="noopener noreferrer"
-            className="p-2 rounded-full text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
+            aria-label="GitHub Profile"
+            className="p-2 min-w-[38px] min-h-[38px] flex items-center justify-center rounded-full text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
             title="GitHub Repository"
           >
             <Github size={16} />
@@ -154,7 +157,8 @@ function App() {
             href="https://instagram.com/somyajeet.op"
             target="_blank"
             rel="noopener noreferrer"
-            className="p-2 rounded-full text-slate-600 dark:text-slate-400 hover:text-pink-500 transition-colors"
+            aria-label="Instagram Profile"
+            className="p-2 min-w-[38px] min-h-[38px] flex items-center justify-center rounded-full text-slate-600 dark:text-slate-400 hover:text-pink-500 transition-colors"
             title="Instagram Profile"
           >
             <Instagram size={16} />
