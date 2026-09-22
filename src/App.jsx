@@ -202,13 +202,14 @@ function App() {
                 title="Active Batches"
                 description="Supported academic years and semester schedules."
                 icon={Calendar}
-                badge="3 Batches"
+                badge="4 Batches"
                 delay={0.3}
               >
                 <div className="mt-2 text-xs font-mono font-bold text-slate-700 dark:text-slate-300 flex flex-wrap gap-1.5">
                   <span className="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">2023-27</span>
                   <span className="px-2 py-0.5 rounded bg-cyan-100 dark:bg-cyan-500/10 text-cyan-800 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-500/20">2024-28</span>
                   <span className="px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-500/10 text-purple-800 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20">2025-29</span>
+                  <span className="px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-500/10 text-amber-800 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20">2026-30</span>
                 </div>
               </BentoCard>
             </BentoGrid>

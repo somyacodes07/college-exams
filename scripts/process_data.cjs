@@ -7,9 +7,9 @@ const csvDir = path.normalize(path.join(__dirname, '../csv_data'));
 const OUTPUT_JSON = path.normalize(path.join(__dirname, '../src/data/exam_data.json'));
 
 async function processData() {
-  console.log('Processing all batches (2023-27, 2024-28, 2025-29)...');
+  console.log('Processing all batches (2023-27, 2024-28, 2025-29, 2026-30)...');
 
-  const batches = ['2023-27', '2024-28', '2025-29'];
+  const batches = ['2023-27', '2024-28', '2025-29', '2026-30'];
   let allStudents = [];
 
   for (const batch of batches) {

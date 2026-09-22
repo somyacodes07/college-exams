@@ -12,16 +12,32 @@ const rawData = fs.readFileSync(examDataPath, 'utf8');
 const examData = JSON.parse(rawData);
 
 assert.strictEqual(Array.isArray(examData), true, 'exam_data.json should contain an array of student records');
-assert.strictEqual(examData.length, 394, 'Should contain 394 student records');
+assert.strictEqual(examData.length, 593, 'Should contain 593 student records');
+
+const batches = new Set(examData.map(s => s.batch));
+assert.strictEqual(batches.has('2023-27'), true, 'Should contain batch 2023-27');
+assert.strictEqual(batches.has('2024-28'), true, 'Should contain batch 2024-28');
+assert.strictEqual(batches.has('2025-29'), true, 'Should contain batch 2025-29');
+assert.strictEqual(batches.has('2026-30'), true, 'Should contain batch 2026-30');
 
 let invalidRecords = 0;
+let duplicatePracticals = 0;
 for (const student of examData) {
   if (!student.rollNo || !student.name) {
     invalidRecords++;
   }
+  const seenPrac = new Set();
+  for (const p of (student.practical || [])) {
+    const key = `${p.subject}::${p.date}`;
+    if (seenPrac.has(key)) {
+      duplicatePracticals++;
+    }
+    seenPrac.add(key);
+  }
 }
 assert.strictEqual(invalidRecords, 0, 'All student records must have valid rollNo and name');
-console.log('✅ PASS: Data integrity test passed (394 valid student records)');
+assert.strictEqual(duplicatePracticals, 0, 'Zero duplicate practical exams allowed per student');
+console.log(`✅ PASS: Data integrity test passed (${examData.length} valid student records across 4 batches, 0 duplicates)`);
 
 // Test 2: Secret Scanning Check on server.cjs
 const serverPath = path.join(__dirname, '../server/server.cjs');

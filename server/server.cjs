@@ -354,7 +354,8 @@ app.get('/api/students/sync-config', authenticateToken, async (req, res) => {
       batches: {
         '2023-27': { mappingUrl: '', theoryUrl: '', practicalUrl: '' },
         '2024-28': { mappingUrl: '', theoryUrl: '', practicalUrl: '' },
-        '2025-29': { mappingUrl: '', theoryUrl: '', practicalUrl: '' }
+        '2025-29': { mappingUrl: '', theoryUrl: '', practicalUrl: '' },
+        '2026-30': { mappingUrl: '', theoryUrl: '', practicalUrl: '' }
       },
       useAi: false
     };
@@ -464,7 +465,8 @@ app.post('/api/students/sync-sheets', authenticateToken, async (req, res) => {
       batches: {
         '2023-27': { mappingUrl: '', theoryUrl: '', practicalUrl: '' },
         '2024-28': { mappingUrl: '', theoryUrl: '', practicalUrl: '' },
-        '2025-29': { mappingUrl: '', theoryUrl: '', practicalUrl: '' }
+        '2025-29': { mappingUrl: '', theoryUrl: '', practicalUrl: '' },
+        '2026-30': { mappingUrl: '', theoryUrl: '', practicalUrl: '' }
       },
       useAi: false
     };
@@ -594,6 +596,17 @@ app.post('/api/students/sync-all-sheets', authenticateToken, async (req, res) =>
     }
 
     const totalCount = results.reduce((sum, r) => sum + r.count, 0);
+
+    // Update local exam_data.json if sync was successful
+    if (totalCount > 0) {
+      try {
+        const allStudents = await Student.find({}).sort({ rollNo: 1 }).lean();
+        const jsonPath = path.normalize(path.join(__dirname, '../src/data/exam_data.json'));
+        fs.writeFileSync(jsonPath, JSON.stringify(allStudents, null, 2));
+      } catch (e) {
+        console.warn('Warning: Could not update exam_data.json:', e.message);
+      }
+    }
 
     res.json({
       success: true,

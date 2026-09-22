@@ -15,7 +15,8 @@ const AdminModal = ({ isOpen, onClose, onSyncSuccess }) => {
   const [sheetUrls, setSheetUrls] = useState({
     '2023-27': { mapping: '', theory: '', practical: '' },
     '2024-28': { mapping: '', theory: '', practical: '' },
-    '2025-29': { mapping: '', theory: '', practical: '' }
+    '2025-29': { mapping: '', theory: '', practical: '' },
+    '2026-30': { mapping: '', theory: '', practical: '' }
   });
   const [useAi, setUseAi] = useState(false);
   const [groqApiKey, setGroqApiKey] = useState('');
@@ -26,7 +27,8 @@ const AdminModal = ({ isOpen, onClose, onSyncSuccess }) => {
   const [files, setFiles] = useState({
     '2023-27': { mapping: null, theory: null, practical: null },
     '2024-28': { mapping: null, theory: null, practical: null },
-    '2025-29': { mapping: null, theory: null, practical: null }
+    '2025-29': { mapping: null, theory: null, practical: null },
+    '2026-30': { mapping: null, theory: null, practical: null }
   });
 
   const [status, setStatus] = useState('idle'); // idle | loading | success | error
@@ -41,32 +43,86 @@ const AdminModal = ({ isOpen, onClose, onSyncSuccess }) => {
     practical: useRef(null)
   };
 
-  useEffect(() => {
-    if (isOpen) {
-      if (hasAuthToken()) {
-        handleResumeSession();
-      } else {
-        setIsAuthenticated(false);
-        setStatus('idle');
-      }
-    }
-  }, [isOpen]);
-
-  const handleResumeSession = async () => {
+  const loadConfig = async () => {
     try {
-      setStatus('loading');
-      setStatusMsg('Resuming session...');
-      setErrorMsg('');
-      await loadConfig();
-      setIsAuthenticated(true);
-      setStatus('idle');
+      const config = await getSyncConfig();
+      if (config.batches) {
+        setSheetUrls({
+          '2023-27': {
+            mapping: config.batches['2023-27']?.mappingUrl || '',
+            theory: config.batches['2023-27']?.theoryUrl || '',
+            practical: config.batches['2023-27']?.practicalUrl || ''
+          },
+          '2024-28': {
+            mapping: config.batches['2024-28']?.mappingUrl || '',
+            theory: config.batches['2024-28']?.theoryUrl || '',
+            practical: config.batches['2024-28']?.practicalUrl || ''
+          },
+          '2025-29': {
+            mapping: config.batches['2025-29']?.mappingUrl || '',
+            theory: config.batches['2025-29']?.theoryUrl || '',
+            practical: config.batches['2025-29']?.practicalUrl || ''
+          },
+          '2026-30': {
+            mapping: config.batches['2026-30']?.mappingUrl || '',
+            theory: config.batches['2026-30']?.theoryUrl || '',
+            practical: config.batches['2026-30']?.practicalUrl || ''
+          }
+        });
+      } else {
+        setSheetUrls(prev => ({
+          ...prev,
+          '2025-29': {
+            mapping: config.mappingUrl || '',
+            theory: config.theoryUrl || '',
+            practical: config.practicalUrl || ''
+          }
+        }));
+      }
+      setUseAi(!!config.useAi);
+      setHasServerApiKey(!!config.hasApiKey);
+      
+      const savedKey = localStorage.getItem('groqApiKey');
+      if (savedKey) setGroqApiKey(savedKey);
     } catch (err) {
-      clearAuthToken();
-      setIsAuthenticated(false);
-      setStatus('idle');
-      setErrorMsg('');
+      console.warn('Could not load sync configuration from server:', err);
     }
   };
+
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (!hasAuthToken()) {
+      return;
+    }
+
+    let isMounted = true;
+    const timer = setTimeout(async () => {
+      try {
+        setStatus('loading');
+        setStatusMsg('Resuming session...');
+        setErrorMsg('');
+        await loadConfig();
+        if (isMounted) {
+          setIsAuthenticated(true);
+          setStatus('idle');
+        }
+      } catch {
+        if (isMounted) {
+          clearAuthToken();
+          setIsAuthenticated(false);
+          setStatus('idle');
+          setErrorMsg('');
+        }
+      }
+    }, 0);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, [isOpen]);
 
   const handleUnlock = async (passToVerify) => {
     const checkPass = passToVerify || password;
@@ -90,47 +146,6 @@ const AdminModal = ({ isOpen, onClose, onSyncSuccess }) => {
       setErrorMsg(err.message || 'Authentication failed. Please verify the admin password.');
       setStatus('idle');
       setIsAuthenticated(false);
-    }
-  };
-
-  const loadConfig = async () => {
-    try {
-      const config = await getSyncConfig();
-      if (config.batches) {
-        setSheetUrls({
-          '2023-27': {
-            mapping: config.batches['2023-27']?.mappingUrl || '',
-            theory: config.batches['2023-27']?.theoryUrl || '',
-            practical: config.batches['2023-27']?.practicalUrl || ''
-          },
-          '2024-28': {
-            mapping: config.batches['2024-28']?.mappingUrl || '',
-            theory: config.batches['2024-28']?.theoryUrl || '',
-            practical: config.batches['2024-28']?.practicalUrl || ''
-          },
-          '2025-29': {
-            mapping: config.batches['2025-29']?.mappingUrl || '',
-            theory: config.batches['2025-29']?.theoryUrl || '',
-            practical: config.batches['2025-29']?.practicalUrl || ''
-          }
-        });
-      } else {
-        setSheetUrls(prev => ({
-          ...prev,
-          '2025-29': {
-            mapping: config.mappingUrl || '',
-            theory: config.theoryUrl || '',
-            practical: config.practicalUrl || ''
-          }
-        }));
-      }
-      setUseAi(!!config.useAi);
-      setHasServerApiKey(!!config.hasApiKey);
-      
-      const savedKey = localStorage.getItem('groqApiKey');
-      if (savedKey) setGroqApiKey(savedKey);
-    } catch (err) {
-      console.warn('Could not load sync configuration from server:', err);
     }
   };
 
@@ -524,7 +539,7 @@ const AdminModal = ({ isOpen, onClose, onSyncSuccess }) => {
                     <div className="flex bg-slate-100/70 dark:bg-slate-900/40 p-1 rounded-xl border border-slate-200/60 dark:border-white/5 items-center justify-between">
                       <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider pl-2">Batch:</span>
                       <div className="flex gap-1">
-                        {['2023-27', '2024-28', '2025-29'].map((batch) => (
+                        {['2023-27', '2024-28', '2025-29', '2026-30'].map((batch) => (
                           <button
                             key={batch}
                             type="button"

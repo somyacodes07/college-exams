@@ -153,6 +153,14 @@ async function syncAndCheck() {
   console.log(`\n--- Sync Summary ---`);
   if (totalUpdates > 0) {
     console.log(`🎉 Database update completed. ${totalUpdates} batch(es) updated.`);
+    try {
+      const allStudents = await Student.find({}).sort({ rollNo: 1 }).lean();
+      const outputPath = path.normalize(path.join(__dirname, '../src/data/exam_data.json'));
+      fs.writeFileSync(outputPath, JSON.stringify(allStudents, null, 2));
+      console.log(`💾 Exported ${allStudents.length} student records to ${outputPath}`);
+    } catch (err) {
+      console.warn(`⚠️ Warning: Could not update exam_data.json:`, err.message);
+    }
   } else {
     console.log(`✅ All batches are already up-to-date. No database write operations were performed.`);
   }

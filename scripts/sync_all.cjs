@@ -73,7 +73,18 @@ async function syncAll() {
     }
   }
 
-  console.log(`\n🎉 Synced ${totalCount} total students.`);
+  console.log(`\n🎉 Synced ${totalCount} total students across batches.`);
+
+  // Export full updated database to exam_data.json
+  try {
+    const allStudents = await Student.find({}).sort({ rollNo: 1 }).lean();
+    const outputPath = path.normalize(path.join(__dirname, '../src/data/exam_data.json'));
+    fs.writeFileSync(outputPath, JSON.stringify(allStudents, null, 2));
+    console.log(`💾 Exported ${allStudents.length} student records to ${outputPath}`);
+  } catch (err) {
+    console.warn(`⚠️ Warning: Could not update exam_data.json:`, err.message);
+  }
+
   await mongoose.connection.close();
 }
 

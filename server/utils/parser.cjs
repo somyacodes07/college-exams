@@ -1,3 +1,6 @@
+const fs = require('fs');
+const path = require('path');
+
 /**
  * Extracts the direct CSV download link from a Google Sheets URL.
  * Supports standard sharing links and works with specific gid sheets.
@@ -172,6 +175,19 @@ function cleanSubjectName(subject) {
 }
 
 /**
+ * Normalizes time strings by replacing unicode dashes with hyphens and ensuring uniform spacing.
+ */
+function normalizeTimeString(timeStr) {
+  if (!timeStr) return '';
+  return timeStr
+    .replace(/[\u2013\u2014]/g, '-')
+    .replace(/\s*-\s*/g, ' - ')
+    .replace(/(\d)\s*(AM|PM)/gi, '$1 $2')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
  * Parses and maps Theory CSV schedules to student profiles.
  */
 function parseTheory(csvText, students, markers = {}) {
@@ -252,7 +268,7 @@ function parseTheory(csvText, students, markers = {}) {
       currentLocation = '';
     }
     
-    if (timeVal) currentTime = timeVal;
+    if (timeVal) currentTime = normalizeTimeString(timeVal);
     if (locVal) currentLocation = locVal;
 
     if (!rollField) continue;
@@ -294,14 +310,17 @@ function parseTheory(csvText, students, markers = {}) {
             try {
               const studentRoll = BigInt(student.rollNo);
               if (studentRoll >= startRoll && studentRoll <= endRoll) {
-                student.theory.push({
-                  date: currentDate,
-                  subject,
-                  time: currentTime,
-                  location: currentLocation || 'TBD',
-                  type: 'Theory',
-                  ...extraData
-                });
+                const isDupTheory = student.theory.some(t => t.subject === subject && t.date === currentDate);
+                if (!isDupTheory) {
+                  student.theory.push({
+                    date: currentDate,
+                    subject,
+                    time: currentTime,
+                    location: currentLocation || 'TBD',
+                    type: 'Theory',
+                    ...extraData
+                  });
+                }
               }
             } catch (e) {}
           });
@@ -312,14 +331,17 @@ function parseTheory(csvText, students, markers = {}) {
           Array.from(students.values()).forEach(student => {
             try {
               if (BigInt(student.rollNo) === singleRoll) {
-                student.theory.push({
-                  date: currentDate,
-                  subject,
-                  time: currentTime,
-                  location: currentLocation || 'TBD',
-                  type: 'Theory',
-                  ...extraData
-                });
+                const isDupTheory = student.theory.some(t => t.subject === subject && t.date === currentDate);
+                if (!isDupTheory) {
+                  student.theory.push({
+                    date: currentDate,
+                    subject,
+                    time: currentTime,
+                    location: currentLocation || 'TBD',
+                    type: 'Theory',
+                    ...extraData
+                  });
+                }
               }
             } catch (e) {}
           });
@@ -327,6 +349,77 @@ function parseTheory(csvText, students, markers = {}) {
       }
     });
   }
+}
+
+/**
+ * Normalizes a student name for robust matching.
+ */
+function normalizeName(n) {
+  return (n || '')
+    .replace(/\u00A0/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+/**
+ * Advanced matcher for practical student names against mapped students.
+ * Handles middle names, slash variants, minor spelling variations, and spacing differences.
+ */
+function findMatchingStudent(studentName, students) {
+  if (!studentName) return null;
+  const normName = normalizeName(studentName);
+  if (!normName || normName === 'na' || normName === 'break') return null;
+
+  const studentList = Array.from(students.values());
+
+  // 1. Direct exact match
+  for (const s of studentList) {
+    if (normalizeName(s.name) === normName) return s;
+  }
+
+  // 2. Variants (slash-separated e.g. "Zayed Siddiqi / Zayed Siddiqi")
+  const nameVariants = studentName.includes('/')
+    ? studentName.split('/').map(normalizeName).filter(p => p.length > 2)
+    : [normName];
+  for (const s of studentList) {
+    const sNorm = normalizeName(s.name);
+    if (nameVariants.includes(sNorm)) return s;
+  }
+
+  // 3. First + Last name token matching (handles missing/extra middle names)
+  const tokenize = (n) => normalizeName(n).split(' ').filter(Boolean);
+  const prTokens = tokenize(studentName);
+  if (prTokens.length >= 2) {
+    const first = prTokens[0];
+    const last = prTokens[prTokens.length - 1];
+
+    // Candidates where first and last name match exactly
+    const flCandidates = studentList.filter(s => {
+      const sTokens = tokenize(s.name);
+      return sTokens.length >= 2 && sTokens[0] === first && sTokens[sTokens.length - 1] === last;
+    });
+    if (flCandidates.length === 1) return flCandidates[0];
+
+    // Token subset: all practical tokens in student name or vice versa
+    const subsetCandidates = studentList.filter(s => {
+      const sTokens = tokenize(s.name);
+      const prInS = prTokens.every(t => sTokens.includes(t));
+      const sInPr = sTokens.every(t => prTokens.includes(t));
+      return prInS || sInPr;
+    });
+    if (subsetCandidates.length === 1) return subsetCandidates[0];
+  }
+
+  // 4. Compact alphanumeric & typo match (handles "Rudhra yadav" vs "Rudra yadav", "SekharKundu" vs "Sekhar Kundu")
+  const normalizeKey = (n) => normalizeName(n).replace(/[^a-z0-9]/g, '').replace(/h/g, '');
+  const targetKey = normalizeKey(studentName);
+  if (targetKey.length > 3) {
+    const keyCandidates = studentList.filter(s => normalizeKey(s.name) === targetKey);
+    if (keyCandidates.length === 1) return keyCandidates[0];
+  }
+
+  return null;
 }
 
 /**
@@ -361,12 +454,16 @@ function parsePractical(csvText, students, markers = {}) {
     } else {
       const parts = cleanHeader.split(' - ');
       if (parts.length > 1) {
-        subject = parts[0].trim();
         const secondPart = parts.slice(1).join(' - ').trim();
         if (/^(Panel|Batch)\s*\d+/i.test(secondPart)) {
-            panel = secondPart;
+          subject = parts[0].trim();
+          panel = secondPart;
+        } else if (/^(Room|Lab|LH|Hall|Auditorium|Class)\b/i.test(secondPart)) {
+          subject = parts[0].trim();
+          venue = secondPart;
         } else {
-            venue = secondPart;
+          subject = cleanHeader;
+          panel = 'Unknown';
         }
       } else {
         subject = cleanHeader;
@@ -387,27 +484,27 @@ function parsePractical(csvText, students, markers = {}) {
       currentDate = dateCell.trim();
       venueMap.clear();
       subjectMap.clear();
-      tempPanels.clear();
+      // Retain tempPanels across days when subsequent day panel rows don't repeat panel names
       continue;
     }
 
-    // 2. Detect Venue Row
-    const isVenueRow = (row[0] && row[0].includes(venueMarker)) || (row[1] && row[1].includes(venueMarker));
+    const isPanelRow = Boolean(row[0] && row[0].includes(panelMarker));
+    const isVenueRow = !isPanelRow && Boolean((row[0] && row[0].includes(venueMarker)) || (row[1] && row[1].includes(venueMarker)));
+
+    // 2. Detect Venue Row (only if genuinely a venue row)
     if (isVenueRow) {
       row.forEach((cell, idx) => {
         if (idx >= 2 && cell && cell.trim() !== '' && cell.trim() !== 'NA') {
           venueMap.set(idx, cell.trim());
         }
       });
-      if (!(row[0] && row[0].includes(panelMarker))) {
-        continue;
-      }
+      continue;
     }
 
     // 3. Detect Panel/Slot Row
-    if (row[0] && row[0].includes(panelMarker)) {
+    if (isPanelRow) {
       row.forEach((cell, idx) => {
-        if (idx >= 2 && cell) {
+        if (idx >= 2 && cell && cell.trim()) {
           tempPanels.set(idx, cell.trim());
         }
       });
@@ -447,28 +544,43 @@ function parsePractical(csvText, students, markers = {}) {
     for (let j = 2; j < row.length; j++) {
       const studentName = row[j];
       if (studentName && studentName.length > 2 && studentName !== 'NA' && studentName !== 'Break') {
-        const normalizeName = (n) => n.replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
-        const normName = normalizeName(studentName);
+        let student = findMatchingStudent(studentName, students);
 
-        const student = Array.from(students.values()).find(s =>
-          normalizeName(s.name) === normName
-        );
+        if (!student) {
+          // Student not found in mapping (e.g. unmapped backlog student)
+          const cleanName = studentName.replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
+          const autoRoll = `EXT-${cleanName.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()}`;
+          student = {
+            rollNo: autoRoll,
+            name: cleanName,
+            cohort: '',
+            theory: [],
+            practical: [],
+            batch: ''
+          };
+          students.set(autoRoll, student);
+        }
 
-        if (student) {
-          const headerInfo = subjectMap.get(j) || { subject: 'Unknown', panel: 'Unknown', professor: '' };
-          const baseLocation = venueMap.get(j) || 'TBD';
-          const professor = headerInfo.professor || '';
-          
-          let location = baseLocation;
-          if (professor) {
-            location = `${baseLocation} (${professor})`;
-          }
+        const headerInfo = subjectMap.get(j) || { subject: 'Unknown', panel: 'Unknown', professor: '' };
+        const baseLocation = venueMap.get(j) || 'TBD';
+        const professor = headerInfo.professor || '';
+        
+        let location = baseLocation;
+        if (professor) {
+          location = `${baseLocation} (${professor})`;
+        }
 
+        const cleanSubj = cleanSubjectName(headerInfo.subject);
+        const normTime = normalizeTimeString(time);
+
+        // Prevent duplicate practical exam entries (same subject and date)
+        const isDuplicate = student.practical.some(p => p.subject === cleanSubj && p.date === currentDate);
+        if (!isDuplicate) {
           student.practical.push({
             date: currentDate,
-            subject: cleanSubjectName(headerInfo.subject),
+            subject: cleanSubj,
             panel: headerInfo.panel,
-            time: time.trim(),
+            time: normTime,
             location: location,
             type: 'Practical',
             professor: professor
@@ -646,8 +758,14 @@ async function parseCsvData(mappingCsv, theoryCsv, practicalCsv, options = {}) {
   // 1. Process mapping or dynamically generate it
   let students;
   if (!mappingCsv || mappingCsv.trim().length === 0 || mappingCsv.trim() === 'Roll Number,Name of student') {
-    console.log(`⚠️ Mapping CSV not provided. Dynamically generating mapping from practical schedule...`);
-    students = generateDynamicMapping(practicalCsv, options.batch || '2025-29');
+    const localMapping = path.join(__dirname, `../../csv_data/mapping_${options.batch || '2025-29'}.csv`);
+    if (fs.existsSync(localMapping)) {
+      console.log(`Using local mapping file for batch ${options.batch}...`);
+      students = parseMapping(fs.readFileSync(localMapping, 'utf8'));
+    } else {
+      console.log(`⚠️ Mapping CSV not provided. Dynamically generating mapping from practical schedule...`);
+      students = generateDynamicMapping(practicalCsv, options.batch || '2025-29');
+    }
   } else {
     students = parseMapping(mappingCsv);
   }

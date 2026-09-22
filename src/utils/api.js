@@ -203,7 +203,7 @@ export async function getStudentCount() {
     })
     .catch(() => {});
 
-  return cachedCount || 394;
+  return cachedCount || (Array.isArray(localExamData) ? localExamData.length : 0);
 }
 
 // --- Admin API Calls (JWT Auth Required) ---

@@ -9,7 +9,6 @@ const Search = ({ onSelectStudent }) => {
     const [suggestions, setSuggestions] = useState([]);
     const [isFocused, setIsFocused] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [isIndexing, setIsIndexing] = useState(true);
     const inputRef = useRef(null);
 
     useEffect(() => {
@@ -22,10 +21,6 @@ const Search = ({ onSelectStudent }) => {
                 }
             } catch (err) {
                 console.error('Failed to load search index:', err);
-            } finally {
-                if (active) {
-                    setIsIndexing(false);
-                }
             }
         };
         loadIndex();
