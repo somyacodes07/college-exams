@@ -5,7 +5,10 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg/xml" href="/vite.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Exam Scheduler | Batch 25-29</title>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>Exam Scheduler | Theory & Practical Slots</title>
   <meta name="description" content="Find your theory and practical exam schedule." />
   <link rel="manifest" href="/manifest.json" />
   <meta name="theme-color" content="#0f172a" />
@@ -19,10 +22,34 @@
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
           .then((registration) => {
-            console.log('ServiceWorker registration successful with scope: ', registration.scope);
-          }, (err) => {
+            // Check for service worker updates on every page visit
+            registration.update();
+
+            // When a new service worker is installing
+            registration.addEventListener('updatefound', () => {
+              const newWorker = registration.installing;
+              if (newWorker) {
+                newWorker.addEventListener('statechange', () => {
+                  // If installed and an active controller exists, a new build was deployed!
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    window.location.reload();
+                  }
+                });
+              }
+            });
+          })
+          .catch((err) => {
             console.log('ServiceWorker registration failed: ', err);
           });
+      });
+
+      // Reload smoothly when the active worker changes
+      let isRefreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!isRefreshing) {
+          isRefreshing = true;
+          window.location.reload();
+        }
       });
     }
   </script>
