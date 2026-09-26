@@ -5,6 +5,7 @@ import { Analytics } from '@vercel/analytics/react';
 import Search from './components/Search';
 import ScheduleCard from './components/ScheduleCard';
 import AdminModal from './components/AdminModal';
+import SiteMigrationModal from './components/SiteMigrationModal';
 import Spotlight from './components/ui/Spotlight';
 import { BentoGrid, BentoCard } from './components/ui/BentoGrid';
 import { getStudentCount } from './utils/api';
@@ -12,6 +13,7 @@ import { getStudentCount } from './utils/api';
 function App() {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isMigrationOpen, setIsMigrationOpen] = useState(true);
   const [studentCount, setStudentCount] = useState(0);
   const [syncVersion, setSyncVersion] = useState(0);
   const [dbStatus, setDbStatus] = useState('connecting'); // connecting | online | offline
@@ -106,6 +108,8 @@ function App() {
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-3">
+
+
           <motion.button
             whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.92 }}
@@ -168,6 +172,39 @@ function App() {
 
       {/* Main Content Area */}
       <div className="relative z-10 container mx-auto px-4 pt-24 sm:pt-36 pb-16 max-w-5xl">
+        {/* Clean Notice Banner */}
+        <div className="mb-8 p-3.5 sm:p-4 rounded-xl bg-slate-900 dark:bg-[#0c101c] border border-slate-700/60 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm text-slate-200">
+          <div className="flex items-center gap-2.5 text-center sm:text-left">
+            <span className="text-emerald-400 font-bold flex-shrink-0">💬</span>
+            <span>
+              <strong className="text-white">This site is retiring.</strong> Get your exam & daily routine directly on WhatsApp via{' '}
+              <a
+                href="https://yoruichi.zorodev.in/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-emerald-400 underline underline-offset-2 hover:text-emerald-300"
+              >
+                Yoruichi (yoruichi.zorodev.in)
+              </a>
+            </span>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto justify-end">
+            <a
+              href="https://api.whatsapp.com/send/?phone=919547817967&text=Hi+YORUICHI%2C+I+want+to+know+more.&type=phone_number&app_absent=0"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3.5 py-1.5 rounded-lg bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-semibold text-xs transition-colors"
+            >
+              Open Bot ↗
+            </a>
+            <button
+              onClick={() => setIsMigrationOpen(true)}
+              className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-slate-300 text-xs transition-colors cursor-pointer"
+            >
+              Notice
+            </button>
+          </div>
+        </div>
         {/* Hero Banner */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -293,6 +330,12 @@ function App() {
           setSelectedStudent(null);
           setSyncVersion(prev => prev + 1);
         }}
+      />
+
+      {/* Sunsetting & Migration Fullscreen Announcement Modal */}
+      <SiteMigrationModal
+        isOpen={isMigrationOpen}
+        onClose={() => setIsMigrationOpen(false)}
       />
 
       <Analytics />

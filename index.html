@@ -32,7 +32,8 @@
                 newWorker.addEventListener('statechange', () => {
                   // If installed and an active controller exists, a new build was deployed!
                   if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    window.location.reload();
+                    console.log('New content is available; please refresh.');
+                    // Removed window.location.reload() to prevent infinite refresh loops
                   }
                 });
               }
@@ -44,12 +45,9 @@
       });
 
       // Reload smoothly when the active worker changes
-      let isRefreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!isRefreshing) {
-          isRefreshing = true;
-          window.location.reload();
-        }
+        console.log('Service worker controller changed.');
+        // Removed aggressive window.location.reload()
       });
     }
   </script>
