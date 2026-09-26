@@ -6,6 +6,7 @@ import Search from './components/Search';
 import ScheduleCard from './components/ScheduleCard';
 import AdminModal from './components/AdminModal';
 import SiteMigrationModal from './components/SiteMigrationModal';
+import AdPlacement from './components/AdPlacement';
 import Spotlight from './components/ui/Spotlight';
 import { BentoGrid, BentoCard } from './components/ui/BentoGrid';
 import { getStudentCount } from './utils/api';
@@ -232,6 +233,9 @@ function App() {
             student={selectedStudent}
           />
         </div>
+
+        {/* Advertisement Placeholder */}
+        <AdPlacement />
 
         {/* Bento Grid System Dashboard (Shown when no student is selected) */}
         {!selectedStudent && (
