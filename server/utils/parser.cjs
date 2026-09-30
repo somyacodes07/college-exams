@@ -212,7 +212,13 @@ function parseTheory(csvText, students, markers = {}) {
   const headers = parseCsvLine(lines[headerRowIdx]);
   
   let dateIdx = markers.dateIndex !== undefined ? markers.dateIndex : headers.findIndex(c => c.toLowerCase().includes('date') || c.toLowerCase().includes('day'));
-  let subjectIdx = markers.subjectIndex !== undefined ? markers.subjectIndex : headers.findIndex(c => c.toLowerCase().includes('subject') || c.toLowerCase().includes('paper') || c.toLowerCase().includes('course'));
+  let subjectIdx = markers.subjectIndex !== undefined ? markers.subjectIndex : headers.findIndex(c => {
+    const l = c.toLowerCase().trim();
+    return l === 'subject' || l === 'course' || l === 'paper';
+  });
+  if (subjectIdx === -1) {
+    subjectIdx = headers.findIndex(c => c.toLowerCase().includes('subject') && !c.toLowerCase().includes('code'));
+  }
   let timeIdx = markers.timeIndex !== undefined ? markers.timeIndex : headers.findIndex(c => c.toLowerCase().includes('time') || c.toLowerCase().includes('slot') || c.toLowerCase().includes('session'));
   let locationIdx = markers.locationIndex !== undefined ? markers.locationIndex : headers.findIndex(c => c.toLowerCase().includes('location') || c.toLowerCase().includes('class') || c.toLowerCase().includes('room') || c.toLowerCase().includes('venue'));
   let rollIdx = markers.rollIndex !== undefined ? markers.rollIndex : headers.findIndex(c => c.toLowerCase().includes('roll') || c.toLowerCase().includes('student') || c.toLowerCase().includes('range'));
