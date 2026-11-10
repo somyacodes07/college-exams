@@ -211,36 +211,36 @@ const ScheduleCard = ({ student }) => {
             </div>
 
             {/* Mobile-Only Segmented Tabs (Hidden on PC/lg screens) */}
-            <div className="flex lg:hidden items-center justify-center p-1 bg-slate-100 dark:bg-[#0c101c]/90 rounded-2xl border border-slate-200/90 dark:border-white/10 max-w-sm mx-auto shadow-inner">
+            <div className="flex lg:hidden items-stretch gap-1 p-1 bg-slate-100 dark:bg-[#0c101c]/90 rounded-2xl border border-slate-200/90 dark:border-white/10 w-full max-w-md mx-auto shadow-inner">
                 <button
                     onClick={() => setActiveMobileTab('all')}
-                    className={`flex-1 py-2 px-2.5 text-xs font-mono font-bold rounded-xl transition-all min-h-[38px] ${
+                    className={`flex-auto inline-flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap py-2 px-1.5 min-[360px]:px-2 text-xs max-[359px]:font-sans font-mono font-bold rounded-xl transition-all min-h-[40px] ${
                         activeMobileTab === 'all'
                             ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
-                            : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                            : 'text-slate-500 [@media(hover:hover)]:hover:text-slate-900 dark:[@media(hover:hover)]:hover:text-white'
                     }`}
                 >
-                    All ({theoryExams.length + practicalExams.length})
+                    All <span className="text-[10px] px-1.5 py-px rounded-md bg-black/5 dark:bg-white/10">{theoryExams.length + practicalExams.length}</span>
                 </button>
                 <button
                     onClick={() => setActiveMobileTab('theory')}
-                    className={`flex-1 py-2 px-2.5 text-xs font-mono font-bold rounded-xl transition-all min-h-[38px] ${
+                    className={`flex-auto inline-flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap py-2 px-1.5 min-[360px]:px-2 text-xs max-[359px]:font-sans font-mono font-bold rounded-xl transition-all min-h-[40px] ${
                         activeMobileTab === 'theory'
                             ? 'bg-purple-600 text-white shadow-sm'
-                            : 'text-slate-500 hover:text-purple-600 dark:hover:text-purple-400'
+                            : 'text-slate-500 [@media(hover:hover)]:hover:text-purple-600 dark:[@media(hover:hover)]:hover:text-purple-400'
                     }`}
                 >
-                    Theory ({theoryExams.length})
+                    Theory <span className="text-[10px] px-1.5 py-px rounded-md bg-black/5 dark:bg-white/10">{theoryExams.length}</span>
                 </button>
                 <button
                     onClick={() => setActiveMobileTab('practical')}
-                    className={`flex-1 py-2 px-2.5 text-xs font-mono font-bold rounded-xl transition-all min-h-[38px] ${
+                    className={`flex-auto inline-flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap py-2 px-1.5 min-[360px]:px-2 text-xs max-[359px]:font-sans font-mono font-bold rounded-xl transition-all min-h-[40px] ${
                         activeMobileTab === 'practical'
                             ? 'bg-emerald-600 text-white shadow-sm'
-                            : 'text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400'
+                            : 'text-slate-500 [@media(hover:hover)]:hover:text-emerald-600 dark:[@media(hover:hover)]:hover:text-emerald-400'
                     }`}
                 >
-                    Practical ({practicalExams.length})
+                    Practical <span className="text-[10px] px-1.5 py-px rounded-md bg-black/5 dark:bg-white/10">{practicalExams.length}</span>
                 </button>
             </div>
 

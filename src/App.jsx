@@ -144,7 +144,7 @@ function App() {
             <img src="/logo.svg" alt="" width="28" height="28" className="w-7 h-7 rounded-lg flex-shrink-0" />
             <span className="font-heading font-bold text-sm sm:text-base tracking-tight truncate">Exam Scheduler</span>
             <span
-              className="flex items-center gap-1.5 ml-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/10"
+              className="flex max-[359px]:hidden items-center gap-1.5 ml-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/10"
               title={dbStatus === 'offline' ? 'Server unreachable, showing bundled data' : 'Connected to live database'}
             >
               <span className={`w-1.5 h-1.5 rounded-full ${dbStatus === 'online' ? 'bg-emerald-500' : dbStatus === 'connecting' ? 'bg-amber-500 animate-pulse' : 'bg-slate-400'}`} />
