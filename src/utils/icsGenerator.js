@@ -1,168 +1,114 @@
-export const generateICS = (student) => {
-    if (!student) return '';
+import { parseExamDateTime, cleanDateLabel, EXAM_TIMEZONE } from './dateUtils.js';
 
-    const events = [];
-    const now = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+/** Escapes text per RFC 5545 (backslash, comma, semicolon, newlines). */
+const escapeText = (value) =>
+  String(value ?? '')
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\r?\n/g, '\\n');
 
-    // Helper to parse date and time
-    const parseDateTime = (dateStr, timeStr) => {
-        let currentYear = 2026; // Default to 2026
+/** Folds lines longer than 75 octets as required by RFC 5545. */
+const foldLine = (line) => {
+  if (line.length <= 74) return line;
+  const chunks = [];
+  let rest = line;
+  chunks.push(rest.slice(0, 74));
+  rest = rest.slice(74);
+  while (rest.length > 0) {
+    chunks.push(' ' + rest.slice(0, 73));
+    rest = rest.slice(73);
+  }
+  return chunks.join('\r\n');
+};
 
-        // Extract year from date string if present (e.g. "2025", "2026")
-        const yearMatch = dateStr.match(/\b(202\d)\b/);
-        if (yearMatch) {
-            currentYear = parseInt(yearMatch[1]);
-        }
+const pad = (n) => String(n).padStart(2, '0');
 
-        let month, day;
+/** UTC timestamp in ICS basic format: 20261010T043000Z */
+const formatUtc = (date) =>
+  `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}Z`;
 
-        // Handle "23/06/2026"
-        if (dateStr.includes('/')) {
-            const parts = dateStr.split('/');
-            day = parseInt(parts[0]);
-            month = parseInt(parts[1]) - 1;
-            if (parts[2]) {
-                const yr = parseInt(parts[2]);
-                if (yr > 2000) currentYear = yr;
-            }
-        }
-        // Handle "23rd December 2025" or "19th June (Friday)"
-        else {
-            // Remove day-of-week context like "(Friday)"
-            const cleanedDateStr = dateStr.replace(/\([a-zA-Z]+\)/, '').trim();
-            const parts = cleanedDateStr.split(/[\s,]+/);
-            day = parseInt(parts[0]);
-            
-            // Find month word (e.g. "December", "June", "Dec", "Jun")
-            const monthWord = parts.find(p => getMonthIndex(p) !== -1);
-            if (monthWord) {
-                month = getMonthIndex(monthWord);
-            }
-        }
+/** Stable hash so re-importing the same schedule updates events instead of duplicating them. */
+const hash = (str) => {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+};
 
-        // Handle "Day 1 : 17th Dec : Wed" or similar
-        if ((month === undefined || isNaN(day) || month === -1) && dateStr.includes(':')) {
-            const parts = dateStr.split(':');
-            const datePart = parts[1] ? parts[1].trim() : ''; 
-            const dateSubParts = datePart.split(' ');
-            day = parseInt(dateSubParts[0]);
-            month = getMonthIndex(dateSubParts[1]);
-        }
-        
-        if (month === undefined || isNaN(day) || month === -1) {
-            console.error("Unknown date format:", dateStr);
-            return null;
-        }
-        
-        // Parse Time "10:00 AM –10:30 AM" or "10:00 AM – 12:00 PM"
-        // Normalize en-dash, em-dash to hyphen
-        const normalizedTimeStr = timeStr.replace(/[–—]/g, '-');
-        const [startStr, endStr] = normalizedTimeStr.split('-').map(s => s.trim());
+const hasValue = (v) => v && v !== 'TBD' && v !== 'Unknown' && String(v).trim() !== '';
 
-        const startDate = new Date(currentYear, month, day);
-        const endDate = new Date(currentYear, month, day);
+/**
+ * Builds an .ics calendar for a student's theory and practical exams.
+ * Includes a reminder 1 hour and 1 day before each exam.
+ */
+export const generateICS = (student, { includeCompleted = true } = {}) => {
+  if (!student) return '';
 
-        const setTime = (dateObj, timeString) => {
-            const match = timeString.match(/(\d+):(\d+)\s*(AM|PM)/i);
-            if (!match) return;
-            let [_, hours, minutes, period] = match;
-            hours = parseInt(hours);
-            minutes = parseInt(minutes);
+  const now = formatUtc(new Date());
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Exam Scheduler//Schedule Export//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    `X-WR-CALNAME:${escapeText(`Exams – ${student.name}`)}`,
+    `X-WR-TIMEZONE:${EXAM_TIMEZONE}`,
+  ];
 
-            if (period.toUpperCase() === 'PM' && hours !== 12) hours += 12;
-            if (period.toUpperCase() === 'AM' && hours === 12) hours = 0;
+  const addExam = (exam, kind) => {
+    const parsed = parseExamDateTime(exam.date, exam.time);
+    if (!parsed) return;
+    if (!includeCompleted && parsed.end.getTime() < Date.now()) return;
 
-            dateObj.setHours(hours, minutes, 0, 0);
-        };
+    const label = kind === 'theory' ? 'Theory' : 'Practical';
+    const details = [`${label} exam: ${exam.subject}`];
+    if (hasValue(exam.professor)) details.push(`Examiner: ${exam.professor}`);
+    if (hasValue(exam.panel)) details.push(`Panel: ${exam.panel}`);
+    if (exam.time) details.push(`Time: ${exam.time}`);
+    details.push(`Roll No: ${student.rollNo}`);
 
-        setTime(startDate, startStr);
-        setTime(endDate, endStr);
+    const location = hasValue(exam.location) ? exam.location : kind === 'theory' ? 'Exam Hall' : 'Lab';
+    const uid = `${hash(`${student.rollNo}|${kind}|${exam.subject}|${cleanDateLabel(exam.date)}|${exam.time}`)}@exam-scheduler`;
 
-        return { start: startDate, end: endDate };
-    };
+    lines.push(
+      'BEGIN:VEVENT',
+      `UID:${uid}`,
+      `DTSTAMP:${now}`,
+      `DTSTART:${formatUtc(parsed.start)}`,
+      `DTEND:${formatUtc(parsed.end)}`,
+      `SUMMARY:${escapeText(`${label}: ${exam.subject}`)}`,
+      `DESCRIPTION:${escapeText(details.join('\n'))}`,
+      `LOCATION:${escapeText(location)}`,
+      `CATEGORIES:${label.toUpperCase()}`,
+      'BEGIN:VALARM',
+      'ACTION:DISPLAY',
+      `DESCRIPTION:${escapeText(`${label}: ${exam.subject}`)}`,
+      'TRIGGER:-PT1H',
+      'END:VALARM',
+      'BEGIN:VALARM',
+      'ACTION:DISPLAY',
+      `DESCRIPTION:${escapeText(`Tomorrow: ${exam.subject}`)}`,
+      'TRIGGER:-P1D',
+      'END:VALARM',
+      'END:VEVENT'
+    );
+  };
 
-    const getMonthIndex = (monthStr) => {
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const fullMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  (student.theory || []).forEach((exam) => addExam(exam, 'theory'));
+  (student.practical || []).forEach((exam) => addExam(exam, 'practical'));
 
-        let index = months.findIndex(m => monthStr.startsWith(m));
-        if (index === -1) {
-            index = fullMonths.findIndex(m => m.toLowerCase() === monthStr.toLowerCase());
-        }
-        return index;
-    };
-
-    const formatICSDate = (date) => {
-        return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    };
-
-    // Process Theory Exams
-    student.theory.forEach(exam => {
-        const dt = parseDateTime(exam.date, exam.time);
-        if (dt) {
-            let desc = `Subject: ${exam.subject}\\nType: Theory`;
-            if (exam.professor) desc += `\\nProfessor: ${exam.professor}`;
-
-            events.push({
-                summary: `Theory Exam: ${exam.subject}`,
-                start: dt.start,
-                end: dt.end,
-                description: desc,
-                location: exam.location && exam.location !== 'TBD' ? exam.location : 'Exam Hall'
-            });
-        }
-    });
-
-    // Process Practical Exams
-    student.practical.forEach(exam => {
-        const dt = parseDateTime(exam.date, exam.time);
-        if (dt) {
-            let desc = `Subject: ${exam.subject}\\nType: Practical`;
-            if (exam.professor) desc += `\\nProfessor: ${exam.professor}`;
-            if (exam.panel) desc += `\\nPanel: ${exam.panel}`;
-
-            events.push({
-                summary: `Practical Exam: ${exam.subject}`,
-                start: dt.start,
-                end: dt.end,
-                description: desc,
-                location: exam.location && exam.location !== 'TBD' ? exam.location : 'Lab'
-            });
-        }
-    });
-
-    let icsContent = [
-        'BEGIN:VCALENDAR',
-        'VERSION:2.0',
-        'PRODID:-//College Exams//Scheduler//EN',
-        'CALSCALE:GREGORIAN',
-        'METHOD:PUBLISH'
-    ];
-
-    events.forEach(event => {
-        icsContent.push(
-            'BEGIN:VEVENT',
-            `DTSTAMP:${now}`,
-            `DTSTART:${formatICSDate(event.start)}`,
-            `DTEND:${formatICSDate(event.end)}`,
-            `SUMMARY:${event.summary}`,
-            `DESCRIPTION:${event.description}`,
-            `LOCATION:${event.location}`,
-            'END:VEVENT'
-        );
-    });
-
-    icsContent.push('END:VCALENDAR');
-
-    return icsContent.join('\r\n');
+  lines.push('END:VCALENDAR');
+  return lines.map(foldLine).join('\r\n');
 };
 
 export const downloadICS = (filename, content) => {
-    const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' });
-    const link = document.createElement('a');
-    link.href = window.URL.createObjectURL(blob);
-    link.setAttribute('download', filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => window.URL.revokeObjectURL(url), 1000);
 };

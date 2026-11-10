@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, Clock, BookOpen, Code, AlertCircle, MapPin, User as PersonIcon, Copy, Check, Play, ChevronDown, ChevronUp } from 'lucide-react';
 import { generateICS, downloadICS } from '../utils/icsGenerator';
-import { isExamCompleted } from '../utils/dateUtils';
+import { isExamCompleted, sortExams } from '../utils/dateUtils';
 import tutVideo from '../assets/tut.mp4';
 
 const itemVariants = {
@@ -121,20 +121,25 @@ const ScheduleCard = ({ student }) => {
     const [activeMobileTab, setActiveMobileTab] = useState('all');
     const [showVideo, setShowVideo] = useState(false);
 
-    if (!student) return null;
+    // Show exams in chronological order (sheets list them in arbitrary order)
+    const theoryExams = useMemo(() => sortExams(student?.theory || []), [student]);
+    const practicalExams = useMemo(() => sortExams(student?.practical || []), [student]);
 
-    const theoryExams = student.theory || [];
-    const practicalExams = student.practical || [];
+    if (!student) return null;
 
     const handleExport = () => {
         const icsContent = generateICS(student);
-        downloadICS(`${student.name.replace(/\s+/g, '_')}_Schedule.ics`, icsContent);
+        downloadICS(`${student.name.replace(/[^a-z0-9]+/gi, '_')}_Schedule.ics`, icsContent);
     };
 
-    const handleCopyRoll = () => {
-        navigator.clipboard.writeText(student.rollNo);
-        setIsCopied(true);
-        setTimeout(() => setIsCopied(false), 2000);
+    const handleCopyRoll = async () => {
+        try {
+            await navigator.clipboard.writeText(student.rollNo);
+            setIsCopied(true);
+            setTimeout(() => setIsCopied(false), 2000);
+        } catch {
+            /* clipboard unavailable (e.g. non-HTTPS) */
+        }
     };
 
     const containerVariants = {
@@ -374,7 +379,7 @@ const ScheduleCard = ({ student }) => {
                                     controls
                                     autoPlay
                                     playsInline
-                                    preload="auto"
+                                    preload="metadata"
                                     className="w-full h-auto object-cover opacity-95 hover:opacity-100 transition-opacity"
                                 />
                             </motion.div>

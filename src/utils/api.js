@@ -52,158 +52,207 @@ function getAuthHeaders() {
 }
 
 /**
- * In-memory fast cache map initialized with local exam data.
- * Guarantees 0ms instant data access without waiting for network database latency.
+ * In-memory cache initialised from the bundled exam data, so search and
+ * schedules render instantly; the server refreshes it in the background.
  */
-let studentCacheMap = new Map();
+const studentCacheMap = new Map();
 let searchIndexCache = [];
+let serverCount = null;
+const listeners = new Set();
+
+const notify = () => listeners.forEach((fn) => {
+  try { fn(searchIndexCache); } catch { /* ignore listener errors */ }
+});
+
+/** Subscribe to search-index refreshes. Returns an unsubscribe function. */
+export function subscribeToIndex(fn) {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
+
+function toIndexEntry(s) {
+  const name = s.name || '';
+  const rollNo = String(s.rollNo);
+  const cohort = s.cohort || '';
+  return {
+    name,
+    rollNo,
+    batch: s.batch,
+    cohort,
+    // Pre-normalised fields keep per-keystroke search cheap
+    _name: name.toLowerCase(),
+    _roll: rollNo.toLowerCase(),
+    _cohort: cohort.toLowerCase(),
+  };
+}
 
 function initCache(data) {
   if (!Array.isArray(data)) return;
   const newIndex = [];
-  
-  for (const s of data) {
-    if (s && s.rollNo) {
-      const rollStr = String(s.rollNo);
-      const existing = studentCacheMap.get(rollStr);
-      
-      // If incoming record has full exam data OR no existing full record exists, update cache
-      if (s.theory || !existing) {
-        studentCacheMap.set(rollStr, s);
-      } else if (existing) {
-        // Merge metadata updates without wiping theory/practical arrays
-        if (s.cohort !== undefined) existing.cohort = s.cohort;
-        if (s.batch !== undefined) existing.batch = s.batch;
-        if (s.name !== undefined) existing.name = s.name;
-      }
 
-      newIndex.push({
-        name: s.name,
-        rollNo: rollStr,
-        batch: s.batch,
-        cohort: s.cohort || ''
+  for (const s of data) {
+    if (!s || !s.rollNo) continue;
+    const rollStr = String(s.rollNo);
+    const existing = studentCacheMap.get(rollStr);
+
+    if (s.theory || s.practical || !existing) {
+      studentCacheMap.set(rollStr, s);
+    } else {
+      // Metadata-only update: keep existing exam arrays
+      studentCacheMap.set(rollStr, {
+        ...existing,
+        ...(s.cohort !== undefined && { cohort: s.cohort }),
+        ...(s.batch !== undefined && { batch: s.batch }),
+        ...(s.name !== undefined && { name: s.name }),
       });
     }
+    newIndex.push(toIndexEntry(s));
   }
-  
+
+  newIndex.sort((a, b) => a.name.localeCompare(b.name));
   searchIndexCache = newIndex;
 }
 
-// Initialize immediately on module load with full local data
 initCache(localExamData);
+
+const hasExams = (s) => s && (Array.isArray(s.theory) || Array.isArray(s.practical));
+
+/**
+ * Ranks index entries against a query. Exact roll / name-prefix matches come
+ * first, then word-prefix matches, then substring matches. Every word in the
+ * query must match somewhere, so "rahul kum" finds "Rahul Kumar Singh".
+ */
+export function rankStudents(query, index = searchIndexCache, limit = 15) {
+  const q = String(query || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  if (q.length < 2) return [];
+  const words = q.split(' ');
+  const scored = [];
+
+  for (const s of index) {
+    const name = s._name ?? (s.name || '').toLowerCase();
+    const roll = s._roll ?? String(s.rollNo).toLowerCase();
+    const cohort = s._cohort ?? (s.cohort || '').toLowerCase();
+    let score = 0;
+
+    if (roll === q) score = 1000;
+    else if (roll.endsWith(q) && /^\d+$/.test(q)) score = 800; // last digits of roll no.
+    else if (roll.startsWith(q)) score = 700;
+    else if (name === q) score = 900;
+    else if (name.startsWith(q)) score = 600;
+    else if (roll.includes(q)) score = 300;
+    else {
+      const nameWords = name.split(/\s+/);
+      let allMatch = true;
+      let wordScore = 0;
+      for (const w of words) {
+        if (nameWords.some((nw) => nw.startsWith(w))) wordScore += 2;
+        else if (name.includes(w)) wordScore += 1;
+        else if (cohort.includes(w)) wordScore += 0.5;
+        else { allMatch = false; break; }
+      }
+      if (allMatch) score = 100 + wordScore * 50;
+    }
+
+    if (score > 0) scored.push({ s, score });
+  }
+
+  scored.sort((a, b) => b.score - a.score || a.s.name.localeCompare(b.s.name));
+  return scored.slice(0, limit).map((x) => x.s);
+}
 
 // --- Public API Calls (No Auth Required) ---
 
-/**
- * Searches students by name, roll number, or cohort instantly.
- * @param {string} query - The search query (Name, Roll Number, or Cohort).
- * @returns {Promise<Array>} - List of matching student objects containing full schedules.
- */
+/** Searches students by name, roll number, or cohort from the in-memory index. */
 export async function searchStudents(query) {
-  if (!query || query.trim().length < 2) return [];
-  const q = query.trim().toLowerCase();
-  
-  // Instant search from in-memory cache
-  const matches = Array.from(studentCacheMap.values()).filter(student =>
-    (student.name && student.name.toLowerCase().includes(q)) ||
-    (student.rollNo && String(student.rollNo).toLowerCase().includes(q)) ||
-    (student.cohort && student.cohort.toLowerCase().includes(q))
-  ).slice(0, 10);
-
-  // Background fetch to ensure fresh server sync (non-blocking)
-  fetch(`${API_BASE}/api/students/search?q=${encodeURIComponent(query.trim())}`)
-    .then(res => res.ok ? res.json() : [])
-    .then(serverResults => {
-      if (Array.isArray(serverResults) && serverResults.length > 0) {
-        for (const s of serverResults) {
-          if (s && s.rollNo && s.theory) studentCacheMap.set(String(s.rollNo), s);
-        }
-      }
-    })
-    .catch(() => {});
-
-  return matches;
+  return rankStudents(query, searchIndexCache, 10).map((s) => studentCacheMap.get(s.rollNo) || s);
 }
 
+let indexRefresh = null;
+
 /**
- * Gets a lightweight list of all students for instant client-side search.
- * Returns cached index in 0ms, then updates from backend in background.
- * @returns {Promise<Array>} - List of student objects for search index.
+ * Returns the cached search index immediately and refreshes it from the
+ * server once per page load. Use subscribeToIndex() to receive the refresh.
  */
 export async function getSearchIndex() {
-  // Background update from server (non-blocking)
-  fetch(`${API_BASE}/api/students/search-index`)
-    .then(res => res.ok ? res.json() : null)
-    .then(serverIndex => {
-      if (Array.isArray(serverIndex) && serverIndex.length > 0) {
-        initCache(serverIndex);
-      }
-    })
-    .catch(() => {});
-
-  // Return cached index instantly (0ms latency)
+  if (!indexRefresh) {
+    indexRefresh = fetch(`${API_BASE}/api/students/search-index`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((serverIndex) => {
+        if (Array.isArray(serverIndex) && serverIndex.length > 0) {
+          initCache(serverIndex);
+          serverCount = serverIndex.length;
+          notify();
+        }
+      })
+      .catch(() => {});
+  }
   return searchIndexCache;
 }
 
-/**
- * Gets a student's full schedule by their unique roll number.
- * Returns instantly from memory cache (0ms delay).
- * @param {string} rollNo - The roll number of the student.
- * @returns {Promise<Object|null>} - The student object or null if not found.
- */
+/** Gets a student's full schedule by roll number (cache first, server fallback). */
 export async function getStudentByRoll(rollNo) {
   if (!rollNo) return null;
   const rollStr = String(rollNo).trim();
-  
-  let cachedStudent = studentCacheMap.get(rollStr);
+  const cached = studentCacheMap.get(rollStr);
 
-  // If cached student record doesn't exist or lacks theory exams, fetch immediately from server
-  if (!cachedStudent || !cachedStudent.theory) {
-    try {
-      const response = await fetch(`${API_BASE}/api/students/roll/${encodeURIComponent(rollStr)}`);
-      if (response.ok) {
-        const fullStudent = await response.json();
-        if (fullStudent && fullStudent.rollNo) {
-          studentCacheMap.set(rollStr, fullStudent);
-          return fullStudent;
+  const fetchFresh = () =>
+    fetch(`${API_BASE}/api/students/roll/${encodeURIComponent(rollStr)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((fresh) => {
+        if (fresh && fresh.rollNo && hasExams(fresh)) {
+          studentCacheMap.set(String(fresh.rollNo), fresh);
+          return fresh;
         }
-      }
-    } catch (err) {
-      console.error('Error fetching student by roll:', err);
-    }
+        return null;
+      })
+      .catch(() => null);
+
+  if (!hasExams(cached)) {
+    return (await fetchFresh()) || cached || null;
   }
 
-  // Background refresh to update cache if server has updates
-  fetch(`${API_BASE}/api/students/roll/${encodeURIComponent(rollStr)}`)
-    .then(res => res.ok ? res.json() : null)
-    .then(freshStudent => {
-      if (freshStudent && freshStudent.rollNo && freshStudent.theory) {
-        studentCacheMap.set(String(freshStudent.rollNo), freshStudent);
-      }
-    })
-    .catch(() => {});
-
-  return cachedStudent || null;
+  // Refresh in the background so the next view reflects server updates
+  fetchFresh();
+  return cached;
 }
 
-/**
- * Gets the total number of students in the database.
- * Returns instantly from memory cache.
- * @returns {Promise<number>} - Count of students
- */
+/** Total number of students (server count when available, cached otherwise). */
 export async function getStudentCount() {
-  const cachedCount = studentCacheMap.size;
-  
-  fetch(`${API_BASE}/api/students/count`)
-    .then(res => res.ok ? res.json() : null)
-    .then(data => {
-      if (data && typeof data.count === 'number') {
-        // Optionally sync count if backend differs
+  if (serverCount !== null) return serverCount;
+  try {
+    const res = await fetch(`${API_BASE}/api/students/count`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && typeof data.count === 'number' && data.count > 0) {
+        serverCount = data.count;
+        return serverCount;
       }
-    })
-    .catch(() => {});
+    }
+  } catch {
+    /* fall back to cache */
+  }
+  return studentCacheMap.size;
+}
 
-  return cachedCount || (Array.isArray(localExamData) ? localExamData.length : 0);
+/** Health check for the header status pill. */
+export async function checkServerHealth() {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 6000);
+    const res = await fetch(`${API_BASE}/api/health`, { signal: controller.signal });
+    clearTimeout(timer);
+    if (!res.ok) return false;
+    const data = await res.json().catch(() => ({}));
+    return data.db === 'connected';
+  } catch {
+    return false;
+  }
+}
+
+/** Lists batches present in the data, newest first. */
+export function getBatches() {
+  const batches = new Set(searchIndexCache.map((s) => s.batch).filter(Boolean));
+  return [...batches].sort().reverse();
 }
 
 // --- Admin API Calls (JWT Auth Required) ---

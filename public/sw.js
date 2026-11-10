@@ -1,8 +1,9 @@
-const CACHE_NAME = 'exam-scheduler-v3';
+const CACHE_NAME = 'exam-scheduler-v4';
 const urlsToCache = [
     '/',
     '/index.html',
-    '/manifest.json'
+    '/manifest.json',
+    '/logo.svg'
 ];
 
 self.addEventListener('install', (event) => {
