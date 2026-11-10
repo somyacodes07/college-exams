@@ -44,6 +44,13 @@ app.use(express.json({ limit: '10mb' }));
 
 // --- Rate Limiting ---
 
+/** First hop of X-Forwarded-For (set by Vercel/proxies), else the socket address. */
+const getClientIp = (req) => {
+  const fwd = req.headers['x-forwarded-for'];
+  if (typeof fwd === 'string' && fwd.length > 0) return fwd.split(',')[0].trim();
+  return req.socket.remoteAddress || 'unknown';
+};
+
 // General API rate limiter
 const rateLimitWindowMs = 15 * 60 * 1000; // 15 minutes
 const rateLimitMaxRequests = 150;
@@ -59,7 +66,7 @@ setInterval(() => {
 }, rateLimitWindowMs);
 
 const apiRateLimiter = (req, res, next) => {
-  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  const ip = getClientIp(req);
   const now = Date.now();
   
   if (!ipRequestCounts.has(ip)) {
@@ -90,7 +97,7 @@ const apiRateLimiter = (req, res, next) => {
 // Brute-Force Protection for Admin password attempts
 const loginAttempts = new Map();
 const adminUploadRateLimiter = (req, res, next) => {
-  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  const ip = getClientIp(req);
   const now = Date.now();
   
   if (loginAttempts.has(ip)) {
@@ -224,6 +231,17 @@ const connectDB = async (req, res, next) => {
   }
 };
 
+// Health check (registered before the DB middleware so it always answers)
+app.get('/api/health', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  try {
+    await connectToDatabase();
+    res.json({ status: 'ok', db: 'connected' });
+  } catch (err) {
+    res.status(503).json({ status: 'degraded', db: 'disconnected' });
+  }
+});
+
 app.use(connectDB);
 
 // ============================================================
@@ -250,7 +268,7 @@ app.get('/api/students/search', async (req, res) => {
       return res.json([]);
     }
 
-    const searchQuery = q.trim();
+    const searchQuery = q.trim().slice(0, 64);
     // Escape regex special characters
     const escapedQuery = searchQuery.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
 
@@ -258,7 +276,8 @@ app.get('/api/students/search', async (req, res) => {
     const students = await Student.find({
       $or: [
         { name: { $regex: escapedQuery, $options: 'i' } },
-        { rollNo: { $regex: escapedQuery, $options: 'i' } }
+        { rollNo: { $regex: escapedQuery, $options: 'i' } },
+        { cohort: { $regex: escapedQuery, $options: 'i' } }
       ]
     }).limit(10).lean();
 
@@ -273,7 +292,7 @@ app.get('/api/students/search', async (req, res) => {
 app.get('/api/students/roll/:rollNo', async (req, res) => {
   try {
     const { rollNo } = req.params;
-    if (!rollNo || typeof rollNo !== 'string') {
+    if (!rollNo || typeof rollNo !== 'string' || rollNo.length > 32) {
       return res.status(400).json({ error: 'Roll number must be a valid string' });
     }
 
@@ -293,6 +312,7 @@ app.get('/api/students/roll/:rollNo', async (req, res) => {
 // Get student count
 app.get('/api/students/count', async (req, res) => {
   try {
+    res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=86400');
     const count = await Student.countDocuments();
     res.json({ count });
   } catch (error) {
@@ -308,13 +328,77 @@ app.get('/api/students/count', async (req, res) => {
 // Import helper parser utilities
 const { getCsvUrl, fetchCsvText, parseCsvData } = require('./utils/parser.cjs');
 
+const CONFIG_PATH = path.join(__dirname, 'config.json');
+const DEFAULT_BATCHES = ['2023-27', '2024-28', '2025-29', '2026-30'];
+const BATCH_PATTERN = /^20\d{2}-\d{2}$/;
+
+const isValidBatch = (batch) => typeof batch === 'string' && BATCH_PATTERN.test(batch);
+
+/** Reads the saved Google Sheets sync config, migrating the legacy single-batch format. */
+function readSyncConfig() {
+  const config = {
+    batches: Object.fromEntries(DEFAULT_BATCHES.map((b) => [b, { mappingUrl: '', theoryUrl: '', practicalUrl: '' }])),
+    useAi: false
+  };
+  if (!fs.existsSync(CONFIG_PATH)) return config;
+  try {
+    const parsed = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+    if (parsed.mappingUrl !== undefined && !parsed.batches) {
+      config.batches['2025-29'] = {
+        mappingUrl: parsed.mappingUrl || '',
+        theoryUrl: parsed.theoryUrl || '',
+        practicalUrl: parsed.practicalUrl || ''
+      };
+      config.useAi = !!parsed.useAi;
+      return config;
+    }
+    return { ...config, ...parsed, batches: { ...config.batches, ...(parsed.batches || {}) } };
+  } catch (err) {
+    console.error('Error reading config.json:', err);
+    return config;
+  }
+}
+
+function writeSyncConfig(config) {
+  try {
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
+  } catch (err) {
+    // Read-only filesystems (e.g. serverless) can't persist config; sync still succeeded
+    console.warn('Warning: could not save sync config:', err.message);
+  }
+}
+
+/**
+ * Replaces one batch's students without a destructive delete-first step:
+ * upserts every parsed record, then removes only the batch's stale roll numbers.
+ * If the write fails midway, the previous data is still served.
+ */
+async function replaceBatch(batch, studentsData) {
+  const byRoll = new Map();
+  for (const s of studentsData) {
+    if (!s || !s.rollNo || !s.name) continue;
+    byRoll.set(String(s.rollNo), { ...s, rollNo: String(s.rollNo), batch });
+  }
+  const records = [...byRoll.values()];
+  if (records.length === 0) return 0;
+
+  await Student.bulkWrite(
+    records.map((doc) => ({
+      replaceOne: { filter: { rollNo: doc.rollNo }, replacement: doc, upsert: true }
+    })),
+    { ordered: false }
+  );
+  await Student.deleteMany({ batch, rollNo: { $nin: [...byRoll.keys()] } });
+  return records.length;
+}
+
 // 1. Verify Admin password and issue JWT session token
 app.post('/api/students/verify-password', adminUploadRateLimiter, async (req, res) => {
   try {
     const { password } = req.body;
     const adminPass = process.env.ADMIN_PASSWORD || ADMIN_PASSWORD;
 
-    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const ip = getClientIp(req);
 
     if (!safeComparePassword(password, adminPass)) {
       const attemptsLeft = recordFailedAttempt(ip);
@@ -349,37 +433,7 @@ app.post('/api/students/verify-password', adminUploadRateLimiter, async (req, re
 // 2. Get Saved Sync Configuration (PROTECTED)
 app.get('/api/students/sync-config', authenticateToken, async (req, res) => {
   try {
-    const configPath = path.join(__dirname, 'config.json');
-    let config = {
-      batches: {
-        '2023-27': { mappingUrl: '', theoryUrl: '', practicalUrl: '' },
-        '2024-28': { mappingUrl: '', theoryUrl: '', practicalUrl: '' },
-        '2025-29': { mappingUrl: '', theoryUrl: '', practicalUrl: '' },
-        '2026-30': { mappingUrl: '', theoryUrl: '', practicalUrl: '' }
-      },
-      useAi: false
-    };
-
-    if (fs.existsSync(configPath)) {
-      try {
-        const rawData = fs.readFileSync(configPath, 'utf8');
-        const parsed = JSON.parse(rawData);
-        
-        // Migrate old format if necessary
-        if (parsed.mappingUrl !== undefined && !parsed.batches) {
-          config.batches['2025-29'] = {
-            mappingUrl: parsed.mappingUrl || '',
-            theoryUrl: parsed.theoryUrl || '',
-            practicalUrl: parsed.practicalUrl || ''
-          };
-          config.useAi = !!parsed.useAi;
-        } else {
-          config = { ...config, ...parsed };
-        }
-      } catch (err) {
-        console.error('Error reading config.json:', err);
-      }
-    }
+    const config = readSyncConfig();
     const hasApiKey = !!process.env.GROQ_API_KEY;
     res.json({ ...config, hasApiKey });
   } catch (error) {
@@ -421,8 +475,8 @@ app.post('/api/students/sync-sheets', authenticateToken, async (req, res) => {
   try {
     const { batch, mappingUrl, theoryUrl, practicalUrl, useAi, groqApiKey } = req.body;
     
-    if (!batch || typeof batch !== 'string') {
-      return res.status(400).json({ error: 'Batch identifier must be a valid string.' });
+    if (!isValidBatch(batch)) {
+      return res.status(400).json({ error: 'Batch must look like "2025-29".' });
     }
 
     if (!theoryUrl || !practicalUrl) {
@@ -455,48 +509,17 @@ app.post('/api/students/sync-sheets', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Parsed student records list is empty. Check your sheets layout.' });
     }
 
-    // Update MongoDB: delete only this batch's students, and insert new ones
-    await Student.deleteMany({ batch });
-    const inserted = await Student.insertMany(studentsData);
+    const count = await replaceBatch(batch, studentsData);
 
-    // Save sync config locally
-    const configPath = path.join(__dirname, 'config.json');
-    let currentConfig = {
-      batches: {
-        '2023-27': { mappingUrl: '', theoryUrl: '', practicalUrl: '' },
-        '2024-28': { mappingUrl: '', theoryUrl: '', practicalUrl: '' },
-        '2025-29': { mappingUrl: '', theoryUrl: '', practicalUrl: '' },
-        '2026-30': { mappingUrl: '', theoryUrl: '', practicalUrl: '' }
-      },
-      useAi: false
-    };
-
-    if (fs.existsSync(configPath)) {
-      try {
-        const rawData = fs.readFileSync(configPath, 'utf8');
-        const parsed = JSON.parse(rawData);
-        if (parsed.mappingUrl !== undefined && !parsed.batches) {
-          currentConfig.batches['2025-29'] = {
-            mappingUrl: parsed.mappingUrl || '',
-            theoryUrl: parsed.theoryUrl || '',
-            practicalUrl: parsed.practicalUrl || ''
-          };
-          currentConfig.useAi = !!parsed.useAi;
-        } else {
-          currentConfig = { ...currentConfig, ...parsed };
-        }
-      } catch (err) {}
-    }
-
-    // Update current batch config
+    const currentConfig = readSyncConfig();
     currentConfig.batches[batch] = { mappingUrl, theoryUrl, practicalUrl };
     currentConfig.useAi = !!useAi;
-    fs.writeFileSync(configPath, JSON.stringify(currentConfig, null, 2));
+    writeSyncConfig(currentConfig);
 
     res.json({
       success: true,
-      message: `Database successfully synced with ${inserted.length} students from Google Sheets for batch ${batch}!`,
-      count: inserted.length
+      message: `Database successfully synced with ${count} students from Google Sheets for batch ${batch}!`,
+      count
     });
   } catch (error) {
     console.error('Error syncing Google Sheets:', error);
@@ -509,8 +532,8 @@ app.post('/api/students/upload-csv', authenticateToken, async (req, res) => {
   try {
     const { batch, mappingCsv, theoryCsv, practicalCsv } = req.body;
     
-    if (!batch || typeof batch !== 'string') {
-      return res.status(400).json({ error: 'Batch identifier must be a valid string.' });
+    if (!isValidBatch(batch)) {
+      return res.status(400).json({ error: 'Batch must look like "2025-29".' });
     }
 
     if (!theoryCsv || !practicalCsv) {
@@ -522,14 +545,12 @@ app.post('/api/students/upload-csv', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Failed to parse any student schedule records from the provided CSV files.' });
     }
 
-    // Wipe only this batch and seed new records
-    await Student.deleteMany({ batch });
-    const inserted = await Student.insertMany(studentsData);
+    const count = await replaceBatch(batch, studentsData);
 
     res.json({
       success: true,
-      message: `Database successfully updated with ${inserted.length} students from the uploaded CSV files for batch ${batch}.`,
-      count: inserted.length
+      message: `Database successfully updated with ${count} students from the uploaded CSV files for batch ${batch}.`,
+      count
     });
   } catch (error) {
     console.error('Error processing dynamically uploaded CSV files:', error);
@@ -540,13 +561,11 @@ app.post('/api/students/upload-csv', authenticateToken, async (req, res) => {
 // 6. Sync ALL batches from saved Google Sheets links (PROTECTED)
 app.post('/api/students/sync-all-sheets', authenticateToken, async (req, res) => {
   try {
-    const configPath = path.join(__dirname, 'config.json');
-    if (!fs.existsSync(configPath)) {
+    if (!fs.existsSync(CONFIG_PATH)) {
       return res.status(404).json({ error: 'No saved sync configuration found. Please sync individual batches first.' });
     }
 
-    const rawConfig = fs.readFileSync(configPath, 'utf8');
-    const config = JSON.parse(rawConfig);
+    const config = readSyncConfig();
 
     if (!config.batches) {
       return res.status(400).json({ error: 'Sync configuration is missing batch data.' });
@@ -585,10 +604,9 @@ app.post('/api/students/sync-all-sheets', authenticateToken, async (req, res) =>
           continue;
         }
 
-        await Student.deleteMany({ batch });
-        const inserted = await Student.insertMany(studentsData);
-        results.push({ batch, count: inserted.length });
-        console.log(`[Sync All] Batch ${batch}: ${inserted.length} students synced.`);
+        const count = await replaceBatch(batch, studentsData);
+        results.push({ batch, count });
+        console.log(`[Sync All] Batch ${batch}: ${count} students synced.`);
       } catch (err) {
         console.error(`[Sync All] Error syncing batch ${batch}:`, err.message);
         errors.push({ batch, error: err.message });

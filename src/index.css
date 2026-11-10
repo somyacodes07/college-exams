@@ -77,6 +77,22 @@ body {
   background: #10b981;
 }
 
+/* Respect users who prefer less motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Avoid iOS zoom-on-focus and keep tap targets crisp */
+input, select, textarea, button {
+  font-size: inherit;
+  touch-action: manipulation;
+}
+
 /* Custom Scrollbar for elements */
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
