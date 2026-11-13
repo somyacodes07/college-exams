@@ -27,7 +27,10 @@
     // Apply the saved theme before first paint to avoid a light/dark flash
     try {
       var t = localStorage.getItem('theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-      if (t === 'dark') document.documentElement.classList.add('dark');
+      if (t === 'dark') {
+        document.documentElement.classList.add('dark');
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', '#1f283c');
+      }
     } catch (e) {}
   </script>
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9010905957176372" crossorigin="anonymous"></script>

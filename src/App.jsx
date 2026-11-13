@@ -113,7 +113,7 @@ function App() {
   return (
     <div className="min-h-screen min-h-dvh bg-desk text-ink">
       <header
-        className="sticky top-0 z-40 bg-paper/95 border-b border-rule"
+        className="sticky top-0 z-40 bg-paper/95 border-b border-rule print:hidden"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         <div className="mx-auto max-w-5xl h-14 px-4 flex items-center justify-between gap-3">
@@ -162,9 +162,18 @@ function App() {
           </div>
         )}
 
-        <div className={selectedStudent ? '' : 'mt-6 sm:mt-8'}>
+        <div className={`print:hidden ${selectedStudent ? '' : 'mt-6 sm:mt-8'}`}>
           <Search key={syncVersion} onSelectStudent={handleSelectStudent} selectedStudent={selectedStudent} />
         </div>
+
+        {!selectedStudent && (
+          <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-[14px] text-ink-soft" aria-label="Colour key">
+            <li className="inline-flex items-center gap-2"><span className="w-3 h-3 rounded-[3px] bg-theory" aria-hidden="true" />Theory</li>
+            <li className="inline-flex items-center gap-2"><span className="w-3 h-3 rounded-[3px] bg-practical" aria-hidden="true" />Practical</li>
+            <li className="inline-flex items-center gap-2"><span className="w-3 h-3 rounded-[3px] bg-reexam" aria-hidden="true" />Re-exam (ATKT)</li>
+            <li className="inline-flex items-center gap-2"><span className="w-5 h-3 rounded-[2px] bg-mark" aria-hidden="true" />Your next exam</li>
+          </ul>
+        )}
 
         {!selectedStudent && batches.length > 0 && (
           <p className="mt-4 text-[14px] text-ink-faint tnum max-w-2xl">
@@ -179,9 +188,9 @@ function App() {
           <ScheduleCard key={selectedStudent ? selectedStudent.rollNo : 'empty'} student={selectedStudent} />
         </div>
 
-        <AdPlacement />
+        <div className="print:hidden"><AdPlacement /></div>
 
-        <footer className="mt-10 pt-5 border-t border-rule flex flex-wrap items-center justify-between gap-3 text-[14px] text-ink-soft">
+        <footer className="print:hidden mt-10 pt-5 border-t border-rule flex flex-wrap items-center justify-between gap-3 text-[14px] text-ink-soft">
           <span>
             Made by{' '}
             <a href="https://somyacodes.in" target="_blank" rel="noopener noreferrer" className="font-semibold text-ink underline decoration-rule underline-offset-4 hover:decoration-ink">

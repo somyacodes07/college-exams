@@ -160,7 +160,7 @@ const Search = ({ onSelectStudent, selectedStudent }) => {
 
     return (
         <div className="relative w-full max-w-2xl z-30">
-            <div className={`flex items-center bg-paper rounded-lg border transition-colors ${isFocused ? 'border-ink' : 'border-rule hover:border-ink-faint'}`}>
+            <div className={`flex items-center bg-paper rounded-lg border transition-colors ${isFocused ? 'border-ink ring-2 ring-ink/15' : 'border-rule hover:border-ink-faint'}`}>
                 <div className="pl-4 pr-1 flex-shrink-0 text-ink-faint" aria-hidden="true">
                     {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <SearchIcon className="w-5 h-5" />}
                 </div>
@@ -192,7 +192,7 @@ const Search = ({ onSelectStudent, selectedStudent }) => {
                     autoCapitalize="words"
                     spellCheck={false}
                     enterKeyHint="search"
-                    className="tnum w-full bg-transparent text-ink text-[18px] px-2.5 h-14 outline-none placeholder:text-ink-faint [&::-webkit-search-cancel-button]:hidden"
+                    className="tnum w-full bg-transparent text-ink text-[18px] px-2.5 h-14 outline-none focus-visible:outline-none placeholder:text-ink-faint [&::-webkit-search-cancel-button]:hidden"
                 />
 
                 {query && (
@@ -206,6 +206,10 @@ const Search = ({ onSelectStudent, selectedStudent }) => {
                     </button>
                 )}
             </div>
+
+            {!query && !isFocused && !selectedStudent && (
+                <p className="mt-2 text-[14px] text-ink-faint">Tip: the last 3 or 4 digits of your roll number are enough.</p>
+            )}
 
             {notFound && (
                 <p className="mt-2 text-[14px] text-stamp">
