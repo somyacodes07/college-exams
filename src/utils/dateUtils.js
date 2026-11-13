@@ -302,3 +302,30 @@ export const formatCountdown = (ms) => {
   if (hours > 0) return `${hours}h ${minutes}m`;
   return `${Math.max(1, minutes)}m`;
 };
+
+/** "10:00 AM - 10:30 AM" -> "10:00 AM – 10:30 AM" for display (en dash, no stray spaces). */
+export const displayTime = (time) =>
+  String(time || '').replace(/\s+/g, ' ').trim().replace(/\s*(?:[-–—]|\bto\b)\s*/i, ' – ');
+
+/** Weekday ("Sat") and day ("3 Oct") for a timetable's date column. */
+export const examDateParts = (exam) => {
+  const parsed = parseExamDateTime(exam?.date, exam?.time);
+  if (!parsed) return { weekday: '', day: cleanDateLabel(exam?.date) || 'Date TBA', parsed: null };
+  const [y, m, d] = parsed.dayKey.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d, 12));
+  return {
+    weekday: date.toLocaleDateString('en-IN', { weekday: 'short', timeZone: 'UTC' }),
+    day: date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' }),
+    parsed,
+  };
+};
+
+/** The soonest exam in a list that hasn't finished yet: { exam, parsed } or null. */
+export const findNextExam = (exams = [], now = Date.now()) => {
+  let best = null;
+  for (const exam of exams) {
+    const parsed = parseExamDateTime(exam?.date, exam?.time);
+    if (parsed && parsed.end.getTime() >= now && (!best || parsed.start < best.parsed.start)) best = { exam, parsed };
+  }
+  return best;
+};

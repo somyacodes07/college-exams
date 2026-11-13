@@ -1,24 +1,12 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Github, Instagram, Sun, Moon, Database, Users, Calendar, Search as SearchIcon, CalendarPlus } from 'lucide-react';
+import { Github, Instagram, Sun, Moon, Database } from 'lucide-react';
 import { Analytics } from '@vercel/analytics/react';
 import Search from './components/Search';
 import ScheduleCard from './components/ScheduleCard';
 import AdPlacement from './components/AdPlacement';
-import Spotlight from './components/ui/Spotlight';
-import { BentoGrid, BentoCard } from './components/ui/BentoGrid';
 import { getStudentCount, getStudentByRoll, checkServerHealth, getBatches, subscribeToIndex } from './utils/api';
 
 const AdminModal = lazy(() => import('./components/AdminModal'));
-
-const BATCH_COLORS = [
-  'bg-amber-100 dark:bg-amber-500/10 text-amber-800 dark:text-amber-400 border-amber-200 dark:border-amber-500/20',
-  'bg-violet-100 dark:bg-violet-500/10 text-violet-800 dark:text-violet-400 border-violet-200 dark:border-violet-500/20',
-  'bg-cyan-100 dark:bg-cyan-500/10 text-cyan-800 dark:text-cyan-400 border-cyan-200 dark:border-cyan-500/20',
-  'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20',
-];
-
-const STATUS_LABEL = { connecting: 'Connecting', online: 'Live', offline: 'Offline' };
 
 const getRollFromUrl = () => {
   try {
@@ -52,13 +40,13 @@ function App() {
       const saved = localStorage.getItem('theme');
       if (saved) return saved;
     } catch { /* ignore */ }
-    return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   });
 
   useEffect(() => {
     const root = document.documentElement;
     root.classList.toggle('dark', theme === 'dark');
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#0b0f19' : '#f8fafc');
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#1f283c' : '#ffffff');
     try { localStorage.setItem('theme', theme); } catch { /* ignore */ }
   }, [theme]);
 
@@ -120,173 +108,92 @@ function App() {
 
   const toggleTheme = () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
 
-  const iconBtn = 'w-10 h-10 flex items-center justify-center rounded-full transition-colors active:scale-95';
+  const iconBtn = 'w-10 h-10 inline-flex items-center justify-center rounded-md text-ink-soft hover:text-ink hover:bg-desk transition-colors';
 
   return (
-    <div className="min-h-screen min-h-dvh bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 font-sans selection:bg-emerald-500/30 transition-colors duration-300 relative cyber-grid overflow-x-hidden">
-      {/* Ambient light (desktop only, saves GPU on phones) */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 hidden md:block" aria-hidden="true">
-        <Spotlight fill="#10b981" className="-top-40 left-1/4 opacity-20 dark:opacity-40" />
-        <Spotlight fill="#06b6d4" className="top-1/2 -right-40 opacity-20 dark:opacity-40" />
-      </div>
-
-      {/* Header */}
+    <div className="min-h-screen min-h-dvh bg-desk text-ink">
       <header
-        className="fixed top-0 inset-x-0 z-50 px-3 sm:px-4"
-        style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
+        className="sticky top-0 z-40 bg-paper/95 border-b border-rule"
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
-        <div className="max-w-5xl mx-auto pl-3.5 pr-1.5 py-1.5 sm:pl-5 sm:pr-2 rounded-full bg-white/95 dark:bg-[#0c101c]/95 md:bg-white/85 md:dark:bg-[#0c101c]/80 md:backdrop-blur-lg border border-slate-200/90 dark:border-white/10 shadow-lg shadow-slate-200/40 dark:shadow-none flex justify-between items-center">
+        <div className="mx-auto max-w-5xl h-14 px-4 flex items-center justify-between gap-3">
           <button
             onClick={() => handleSelectStudent(null)}
-            className="flex items-center gap-2 min-w-0 text-left"
+            className="flex items-center gap-2.5 min-w-0 rounded-md"
             aria-label="Exam Scheduler home"
           >
-            <img src="/logo.svg" alt="" width="28" height="28" className="w-7 h-7 rounded-lg flex-shrink-0" />
-            <span className="font-heading font-bold text-sm sm:text-base tracking-tight truncate">Exam Scheduler</span>
-            <span
-              className="flex max-[359px]:hidden items-center gap-1.5 ml-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/10"
-              title={dbStatus === 'offline' ? 'Server unreachable, showing bundled data' : 'Connected to live database'}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${dbStatus === 'online' ? 'bg-emerald-500' : dbStatus === 'connecting' ? 'bg-amber-500 animate-pulse' : 'bg-slate-400'}`} />
-              {STATUS_LABEL[dbStatus]}
-            </span>
+            <img src="/logo.svg" alt="" width="28" height="28" className="w-7 h-7 rounded-[7px] flex-shrink-0 dark:ring-1 dark:ring-rule" />
+            <span className="font-bold text-[17px] tracking-[-0.01em] truncate">Exam Scheduler</span>
           </button>
 
-          <div className="flex items-center gap-0.5 sm:gap-1">
-            <button
-              onClick={() => setIsAdminOpen(true)}
-              aria-label="Admin: sync database"
-              title="Admin: sync database"
-              className={`${iconBtn} text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5`}
-            >
-              <Database size={17} />
-            </button>
+          <div className="flex items-center gap-1">
             <button
               onClick={toggleTheme}
               aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-              title="Toggle theme"
-              className={`${iconBtn} text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 overflow-hidden`}
+              title={theme === 'dark' ? 'Light theme' : 'Dark theme'}
+              className={iconBtn}
             >
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.span
-                  key={theme}
-                  initial={{ y: -14, opacity: 0, rotate: -90 }}
-                  animate={{ y: 0, opacity: 1, rotate: 0 }}
-                  exit={{ y: 14, opacity: 0, rotate: 90 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {theme === 'dark' ? <Sun size={17} className="text-amber-400" /> : <Moon size={17} />}
-                </motion.span>
-              </AnimatePresence>
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
             </button>
-            <a
-              href="https://github.com/somyacodes07"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="GitHub"
-              className={`${iconBtn} hidden sm:flex text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5`}
-            >
-              <Github size={17} />
-            </a>
+            <button onClick={() => setIsAdminOpen(true)} aria-label="Admin: sync schedules" title="Admin" className={iconBtn}>
+              <Database size={18} />
+            </button>
           </div>
         </div>
+        {dbStatus === 'offline' && (
+          <p className="border-t border-rule bg-desk px-4 py-1.5 text-center text-[13px] text-ink-soft">
+            Can't reach the server right now. Search will work again once you're back online.
+          </p>
+        )}
       </header>
 
-      <main className="relative z-10 mx-auto px-4 pt-24 sm:pt-32 pb-12 max-w-5xl" style={{ paddingBottom: 'max(3rem, env(safe-area-inset-bottom))' }}>
-        {/* Hero */}
-        <AnimatePresence initial={false}>
-          {!selectedStudent && (
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-              className="text-center mb-6 sm:mb-10"
-            >
-              <h1 className="text-[2.5rem] sm:text-6xl md:text-7xl font-extrabold font-heading tracking-tight text-slate-900 dark:text-white leading-[1.05]">
-                Find your<br className="sm:hidden" /> <span className="bg-gradient-to-r from-emerald-500 to-cyan-500 bg-clip-text text-transparent">exam slots</span>
-              </h1>
-              <p className="mt-3 text-slate-600 dark:text-slate-400 text-sm sm:text-lg max-w-md mx-auto leading-relaxed">
-                Theory papers and practical vivas for every batch, in one timeline.
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <Search key={syncVersion} onSelectStudent={handleSelectStudent} selectedStudent={selectedStudent} />
-
-        <div id="schedule" className="mt-6 sm:mt-10 scroll-mt-28">
-          <ScheduleCard key={selectedStudent ? selectedStudent.rollNo : 'empty'} student={selectedStudent} />
-        </div>
-
+      <main
+        className="mx-auto max-w-5xl px-4 pt-8 sm:pt-14"
+        style={{ paddingBottom: 'max(2.5rem, env(safe-area-inset-bottom))' }}
+      >
         {!selectedStudent && (
-          <div className="mt-8 sm:mt-14 space-y-4 sm:space-y-6">
-            {/* How it works */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-4">
-              {[
-                { icon: SearchIcon, title: 'Search', text: 'Name or roll no.' },
-                { icon: Calendar, title: 'View', text: 'Day-by-day timeline' },
-                { icon: CalendarPlus, title: 'Save', text: 'Add to your calendar' },
-              ].map((step, i) => (
-                <motion.div
-                  key={step.title}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.05 * i }}
-                  className="rounded-2xl bg-white dark:bg-[#0c101c]/80 border border-slate-200/90 dark:border-white/10 p-3 sm:p-5 text-center sm:text-left"
-                >
-                  <div className="mx-auto sm:mx-0 w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                    <step.icon size={17} />
-                  </div>
-                  <div className="mt-2 font-bold text-sm text-slate-900 dark:text-white">
-                    <span className="font-mono text-slate-400 mr-1">{i + 1}</span>{step.title}
-                  </div>
-                  <div className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 leading-snug">{step.text}</div>
-                </motion.div>
-              ))}
-            </div>
-
-            <BentoGrid>
-              <BentoCard title="Students" description="Schedules indexed across all batches." icon={Users} delay={0.1}>
-                <div className="text-2xl sm:text-3xl font-bold font-heading text-emerald-600 dark:text-emerald-400">
-                  {studentCount.toLocaleString('en-IN')}
-                </div>
-              </BentoCard>
-
-              <BentoCard title="Active batches" description="Academic years with published schedules." icon={Calendar} delay={0.15}>
-                <div className="text-xs font-mono font-bold flex flex-wrap gap-1.5">
-                  {batches.map((b, i) => (
-                    <span key={b} className={`px-2 py-0.5 rounded border ${BATCH_COLORS[i % BATCH_COLORS.length]}`}>{b}</span>
-                  ))}
-                </div>
-              </BentoCard>
-
-              <BentoCard title="Data source" description="Synced from the official exam sheets." icon={Database} delay={0.2}>
-                <div className="text-xs font-mono font-bold flex items-center gap-2 text-slate-700 dark:text-slate-200">
-                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dbStatus === 'online' ? 'bg-emerald-500' : dbStatus === 'connecting' ? 'bg-amber-500 animate-pulse' : 'bg-slate-400'}`} />
-                  <span className="truncate">
-                    {dbStatus === 'online' ? 'Live database connected' : dbStatus === 'connecting' ? 'Connecting…' : 'Showing saved copy'}
-                  </span>
-                </div>
-              </BentoCard>
-            </BentoGrid>
+          <div className="max-w-2xl">
+            <h1 className="text-[2.25rem] sm:text-[3.25rem] font-extrabold leading-[1.05] tracking-[-0.025em]">
+              Your exam date sheet
+            </h1>
+            <p className="mt-3 text-[17px] text-ink-soft max-w-[34rem]">
+              Theory papers, practical vivas and ATKT re‑exams, with time and room. Search your name or roll number.
+            </p>
           </div>
         )}
 
+        <div className={selectedStudent ? '' : 'mt-6 sm:mt-8'}>
+          <Search key={syncVersion} onSelectStudent={handleSelectStudent} selectedStudent={selectedStudent} />
+        </div>
+
+        {!selectedStudent && batches.length > 0 && (
+          <p className="mt-4 text-[14px] text-ink-faint tnum max-w-2xl">
+            {studentCount > 0 ? `${studentCount.toLocaleString('en-IN')} students` : 'Students'} in batches{' '}
+            {batches.slice().sort().map((b, i, all) => (
+              <span key={b} className="whitespace-nowrap">{b}{i < all.length - 1 ? ', ' : '.'}</span>
+            ))}
+          </p>
+        )}
+
+        <div id="schedule" className="mt-6 sm:mt-8 scroll-mt-20">
+          <ScheduleCard key={selectedStudent ? selectedStudent.rollNo : 'empty'} student={selectedStudent} />
+        </div>
+
         <AdPlacement />
 
-        <footer className="mt-10 pt-6 border-t border-slate-200 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
+        <footer className="mt-10 pt-5 border-t border-rule flex flex-wrap items-center justify-between gap-3 text-[14px] text-ink-soft">
           <span>
-            Built by{' '}
-            <a href="https://somyacodes.in" target="_blank" rel="noopener noreferrer" className="font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">
+            Made by{' '}
+            <a href="https://somyacodes.in" target="_blank" rel="noopener noreferrer" className="font-semibold text-ink underline decoration-rule underline-offset-4 hover:decoration-ink">
               Somyajeet Singh
             </a>
           </span>
           <div className="flex items-center gap-1">
-            <a href="https://github.com/somyacodes07" target="_blank" rel="noopener noreferrer" aria-label="GitHub" className={`${iconBtn} hover:text-slate-900 dark:hover:text-white`}>
-              <Github size={16} />
+            <a href="https://github.com/somyacodes07" target="_blank" rel="noopener noreferrer" aria-label="GitHub" className={iconBtn}>
+              <Github size={17} />
             </a>
-            <a href="https://instagram.com/somyajeet.op" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className={`${iconBtn} hover:text-pink-500`}>
-              <Instagram size={16} />
+            <a href="https://instagram.com/somyajeet.op" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className={iconBtn}>
+              <Instagram size={17} />
             </a>
           </div>
         </footer>

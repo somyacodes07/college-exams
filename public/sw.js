@@ -1,4 +1,4 @@
-const CACHE_NAME = 'exam-scheduler-v5';
+const CACHE_NAME = 'exam-scheduler-v6';
 const urlsToCache = [
     '/',
     '/index.html',

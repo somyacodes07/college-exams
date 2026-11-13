@@ -1,26 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Exam Scheduler">
-  <defs>
-    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#1a2540"/>
-      <stop offset="1" stop-color="#0b1220"/>
-    </linearGradient>
-    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#34d399"/>
-      <stop offset="1" stop-color="#22d3ee"/>
-    </linearGradient>
-  </defs>
-
-  <!-- Tile -->
-  <rect width="512" height="512" rx="120" fill="url(#tile)"/>
-  <rect x="3" y="3" width="506" height="506" rx="117" fill="none" stroke="#ffffff" stroke-opacity="0.14" stroke-width="6"/>
-
-  <!-- Schedule rows: the next slot is highlighted, later ones fade -->
-  <circle cx="150" cy="164" r="28" fill="url(#accent)"/>
-  <rect x="204" y="138" width="172" height="52" rx="26" fill="url(#accent)"/>
-
-  <circle cx="150" cy="256" r="28" fill="#ffffff" fill-opacity="0.92"/>
-  <rect x="204" y="230" width="136" height="52" rx="26" fill="#ffffff" fill-opacity="0.92"/>
-
-  <circle cx="150" cy="348" r="28" fill="#ffffff" fill-opacity="0.4"/>
-  <rect x="204" y="322" width="96" height="52" rx="26" fill="#ffffff" fill-opacity="0.4"/>
+  <!-- Ink tile -->
+  <rect width="512" height="512" rx="112" fill="#1c2a47"/>
+  <!-- A date sheet: the next slot is highlighted, later ones fade -->
+  <rect x="112" y="136" width="288" height="64" rx="10" fill="#f7e463"/>
+  <rect x="112" y="240" width="232" height="44" rx="8" fill="#ffffff"/>
+  <rect x="112" y="324" width="176" height="44" rx="8" fill="#ffffff" fill-opacity="0.45"/>
 </svg>
