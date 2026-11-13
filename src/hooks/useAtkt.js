@@ -9,7 +9,7 @@ const REFRESH_MS = 60 * 1000;
  * so edits to the sheet show up without a reload.
  */
 export function useAtkt(rollNo) {
-  const [state, setState] = useState({ rollNo: null, exams: [], updatedAt: null });
+  const [state, setState] = useState({ rollNo: null, exams: [], updatedAt: null, status: 'idle' });
 
   useEffect(() => {
     if (!rollNo) return undefined;
@@ -22,9 +22,11 @@ export function useAtkt(rollNo) {
       controller = new AbortController();
       try {
         const { exams, updatedAt } = await getAtkt(rollNo, { signal: controller.signal });
-        if (active) setState({ rollNo, exams, updatedAt });
-      } catch {
-        // Keep showing the last good data if a refresh fails
+        if (active) setState({ rollNo, exams, updatedAt, status: 'ready' });
+      } catch (err) {
+        if (err?.name === 'AbortError' || !active) return;
+        // Keep the last good data on a failed refresh; only flag an error if we never loaded
+        setState((prev) => (prev.rollNo === rollNo && prev.status === 'ready' ? prev : { rollNo, exams: [], updatedAt: null, status: 'error' }));
       }
     };
 
@@ -45,5 +47,9 @@ export function useAtkt(rollNo) {
 
   // Never show one student's entries while another student is open
   const current = state.rollNo === rollNo;
-  return { exams: current ? state.exams : [], updatedAt: current ? state.updatedAt : null };
+  return {
+    exams: current ? state.exams : [],
+    updatedAt: current ? state.updatedAt : null,
+    status: !rollNo ? 'idle' : current ? state.status : 'loading',
+  };
 }

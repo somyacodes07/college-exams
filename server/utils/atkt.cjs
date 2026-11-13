@@ -14,7 +14,7 @@ const CACHE_MS = Math.max(15, parseInt(process.env.ATKT_CACHE_SECONDS || '60', 1
 const TAB_LIST_CACHE_MS = 5 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 10000;
 
-let tabsCache = { gids: null, at: 0 };
+let tabsCache = { tabs: null, at: 0 };
 let dataCache = { byRoll: null, at: 0, updatedAt: null };
 let inflight = null;
 
@@ -55,21 +55,50 @@ function parseCsv(text) {
   return rows;
 }
 
-/** Discovers every tab (gid) in the sheet. Falls back to ATKT_SHEET_GIDS or the first tab. */
-async function getTabGids() {
-  if (tabsCache.gids && Date.now() - tabsCache.at < TAB_LIST_CACHE_MS) return tabsCache.gids;
-  let gids = (process.env.ATKT_SHEET_GIDS || '').split(',').map((g) => g.trim()).filter((g) => /^\d+$/.test(g));
-  if (gids.length === 0) {
-    try {
-      const html = await fetchText(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/htmlview`);
-      gids = [...new Set([...html.matchAll(/[?&#]gid=(\d+)/g)].map((m) => m[1]))];
-    } catch {
-      gids = [];
+/**
+ * Discovers every tab of the sheet as { gid, name }. Tab names (e.g.
+ * "TH(Sem2)2025-29") drive the grouping shown to students. Falls back to
+ * ATKT_SHEET_GIDS or the first tab if the sheet's HTML view can't be read.
+ */
+async function getTabs() {
+  if (tabsCache.tabs && Date.now() - tabsCache.at < TAB_LIST_CACHE_MS) return tabsCache.tabs;
+  let tabs = [];
+  try {
+    const html = await fetchText(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/htmlview`);
+    for (const m of html.matchAll(/name:\s*"((?:[^"\\]|\\.)*)"[^}]*?gid:\s*"(\d+)"/g)) {
+      const name = m[1].replace(/\\(.)/g, '$1').trim();
+      if (!tabs.some((t) => t.gid === m[2])) tabs.push({ gid: m[2], name });
     }
+    if (tabs.length === 0) {
+      tabs = [...new Set([...html.matchAll(/[?&#]gid=(\d+)/g)].map((m) => m[1]))].map((gid) => ({ gid, name: '' }));
+    }
+  } catch {
+    tabs = [];
   }
-  if (gids.length === 0) gids = tabsCache.gids || ['0'];
-  tabsCache = { gids, at: Date.now() };
-  return gids;
+  if (tabs.length === 0) {
+    const envGids = (process.env.ATKT_SHEET_GIDS || '').split(',').map((g) => g.trim()).filter((g) => /^\d+$/.test(g));
+    tabs = envGids.length ? envGids.map((gid) => ({ gid, name: '' })) : tabsCache.tabs || [{ gid: '0', name: '' }];
+  }
+  tabsCache = { tabs, at: Date.now() };
+  return tabs;
+}
+
+const KIND_LABELS = { TH: 'Theory', PE: 'Project Eval', PR: 'Practical', PRAC: 'Practical', VIVA: 'Viva' };
+
+/**
+ * Reads tab names like "TH(Sem2)2025-29" / "PE(SEM4)2024-28".
+ * @returns {{kind: string, semester: string, batch: string}}
+ */
+function parseTabName(name) {
+  const n = String(name || '');
+  const kindCode = (n.match(/^\s*([A-Za-z]+)/) || [])[1]?.toUpperCase() || '';
+  const sem = n.match(/sem(?:ester)?\s*[-:.]?\s*(\d+)/i);
+  const batch = n.match(/(20\d{2})\s*[-–]\s*(\d{2,4})/);
+  return {
+    kind: KIND_LABELS[kindCode] || '',
+    semester: sem ? `Sem ${sem[1]}` : '',
+    batch: batch ? `${batch[1]}-${batch[2].slice(-2)}` : '',
+  };
 }
 
 const clean = (v) => String(v ?? '').replace(/\s+/g, ' ').trim();
@@ -107,14 +136,20 @@ function parseTitle(rows, headerIndex) {
  * Parses one tab. Merged cells arrive as blanks, so shared values (subject,
  * date, time, ...) are carried down until the next subject block starts.
  */
-function parseTab(csvText) {
+function parseTab(csvText, tabName = '') {
   const rows = parseCsv(csvText);
   const headerIndex = rows.findIndex((r) => r.some((c) => /roll/i.test(c)));
   if (headerIndex === -1) return [];
 
   const fields = rows[headerIndex].map((h) => fieldFor(clean(h)));
   if (!fields.includes('rollNo')) return [];
-  const { semester, batch } = parseTitle(rows, headerIndex);
+  // The tab name is more reliable than the title row (titles are sometimes copied between tabs)
+  const fromTitle = parseTitle(rows, headerIndex);
+  const fromName = parseTabName(tabName);
+  const semester = fromName.semester || fromTitle.semester;
+  const batch = fromName.batch || fromTitle.batch;
+  const kind = fromName.kind;
+  const group = (kind && semester ? `${semester} · ${kind}` : '') || clean(tabName) || fromTitle.title || 'Re-exams';
 
   const carried = ['subjectCode', 'subject', 'examType', 'date', 'time', 'classroom', 'faculty'];
   let current = {};
@@ -138,6 +173,8 @@ function parseTab(csvText) {
 
     out.push({
       rollNo,
+      group,
+      kind,
       semester,
       batch,
       subject: rec.subject,
@@ -153,24 +190,24 @@ function parseTab(csvText) {
 }
 
 async function loadAll() {
-  const gids = await getTabGids();
+  const tabs = await getTabs();
   const results = await Promise.allSettled(
-    gids.map((gid) => fetchText(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`))
+    tabs.map((t) => fetchText(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${t.gid}`))
   );
 
-  const fulfilled = results.filter((r) => r.status === 'fulfilled');
-  if (fulfilled.length === 0) throw new Error('Could not read the ATKT sheet');
+  if (!results.some((r) => r.status === 'fulfilled')) throw new Error('Could not read the ATKT sheet');
 
   const byRoll = new Map();
-  for (const res of fulfilled) {
-    for (const exam of parseTab(res.value)) {
+  results.forEach((res, i) => {
+    if (res.status !== 'fulfilled') return;
+    for (const exam of parseTab(res.value, tabs[i].name)) {
       const { rollNo, ...rest } = exam;
       const list = byRoll.get(rollNo) || [];
-      const key = `${rest.subjectCode}|${rest.subject}|${rest.examType}|${rest.date}|${rest.time}`;
+      const key = `${rest.group}|${rest.subjectCode}|${rest.subject}|${rest.examType}|${rest.date}|${rest.time}`;
       if (!list.some((e) => e._key === key)) list.push({ ...rest, _key: key });
       byRoll.set(rollNo, list);
     }
-  }
+  });
   for (const list of byRoll.values()) list.forEach((e) => delete e._key);
   return byRoll;
 }
@@ -203,4 +240,4 @@ async function getAtktForRoll(rollNo) {
   return { exams: byRoll.get(String(rollNo)) || [], updatedAt };
 }
 
-module.exports = { isConfigured, getAtktForRoll, parseTab, parseCsv };
+module.exports = { isConfigured, getAtktForRoll, parseTab, parseCsv, parseTabName };

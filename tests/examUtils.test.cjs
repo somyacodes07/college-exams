@@ -150,7 +150,15 @@ console.log('✅ PASS: Secret scanning test passed (Zero hardcoded secrets found
   for (const r of rows.filter((x) => x.date)) {
     assert.ok(d.parseExamDateTime(r.date, r.time), `ATKT date/time parses: ${r.date} ${r.time}`);
   }
-  console.log(`✅ PASS: ATKT sheet parsing tests passed (${rows.length} entries)`);
+  // Tab names drive the semester / type tabs (they override copied title rows)
+  const { parseTabName } = require('../server/utils/atkt.cjs');
+  assert.deepStrictEqual(parseTabName('TH(Sem2)2025-29 '), { kind: 'Theory', semester: 'Sem 2', batch: '2025-29' });
+  assert.deepStrictEqual(parseTabName('PE(SEM4)2024-28'), { kind: 'Project Eval', semester: 'Sem 4', batch: '2024-28' });
+  assert.deepStrictEqual(parseTabName('Sheet1'), { kind: '', semester: '', batch: '' });
+  const named = parseTab(sample, 'PE(Sem5)2024-28');
+  assert.ok(named.every((r) => r.semester === 'Sem 5' && r.kind === 'Project Eval' && r.group === 'Sem 5 · Project Eval'), 'Tab name overrides the title row');
+  assert.ok(parseTab(sample, 'Sheet1').every((r) => r.group === 'Sheet1'), 'Unknown tab names are used as-is');
+  console.log(`✅ PASS: ATKT sheet parsing tests passed (${rows.length} entries, tab grouping)`);
 
   console.log('\n🎉 ALL CI/CD TESTS PASSED SUCCESSFULLY!');
 })().catch((err) => {
