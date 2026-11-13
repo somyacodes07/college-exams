@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, Clock, BookOpen, Code, AlertCircle, MapPin, User as PersonIcon, Copy, Check, Play, ChevronDown, ChevronUp } from 'lucide-react';
 import { generateICS, downloadICS } from '../utils/icsGenerator';
-import { isExamCompleted } from '../utils/dateUtils';
+import { isExamCompleted, sortExams } from '../utils/dateUtils';
 import tutVideo from '../assets/tut.mp4';
 
 const itemVariants = {
@@ -121,20 +121,25 @@ const ScheduleCard = ({ student }) => {
     const [activeMobileTab, setActiveMobileTab] = useState('all');
     const [showVideo, setShowVideo] = useState(false);
 
-    if (!student) return null;
+    // Show exams in chronological order (sheets list them in arbitrary order)
+    const theoryExams = useMemo(() => sortExams(student?.theory || []), [student]);
+    const practicalExams = useMemo(() => sortExams(student?.practical || []), [student]);
 
-    const theoryExams = student.theory || [];
-    const practicalExams = student.practical || [];
+    if (!student) return null;
 
     const handleExport = () => {
         const icsContent = generateICS(student);
-        downloadICS(`${student.name.replace(/\s+/g, '_')}_Schedule.ics`, icsContent);
+        downloadICS(`${student.name.replace(/[^a-z0-9]+/gi, '_')}_Schedule.ics`, icsContent);
     };
 
-    const handleCopyRoll = () => {
-        navigator.clipboard.writeText(student.rollNo);
-        setIsCopied(true);
-        setTimeout(() => setIsCopied(false), 2000);
+    const handleCopyRoll = async () => {
+        try {
+            await navigator.clipboard.writeText(student.rollNo);
+            setIsCopied(true);
+            setTimeout(() => setIsCopied(false), 2000);
+        } catch {
+            /* clipboard unavailable (e.g. non-HTTPS) */
+        }
     };
 
     const containerVariants = {
@@ -206,36 +211,36 @@ const ScheduleCard = ({ student }) => {
             </div>
 
             {/* Mobile-Only Segmented Tabs (Hidden on PC/lg screens) */}
-            <div className="flex lg:hidden items-center justify-center p-1 bg-slate-100 dark:bg-[#0c101c]/90 rounded-2xl border border-slate-200/90 dark:border-white/10 max-w-sm mx-auto shadow-inner">
+            <div className="flex lg:hidden items-stretch gap-1 p-1 bg-slate-100 dark:bg-[#0c101c]/90 rounded-2xl border border-slate-200/90 dark:border-white/10 w-full max-w-md mx-auto shadow-inner">
                 <button
                     onClick={() => setActiveMobileTab('all')}
-                    className={`flex-1 py-2 px-2.5 text-xs font-mono font-bold rounded-xl transition-all min-h-[38px] ${
+                    className={`flex-auto inline-flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap py-2 px-1.5 min-[360px]:px-2 text-xs max-[359px]:font-sans font-mono font-bold rounded-xl transition-all min-h-[40px] ${
                         activeMobileTab === 'all'
                             ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
-                            : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                            : 'text-slate-500 [@media(hover:hover)]:hover:text-slate-900 dark:[@media(hover:hover)]:hover:text-white'
                     }`}
                 >
-                    All ({theoryExams.length + practicalExams.length})
+                    All <span className="text-[10px] px-1.5 py-px rounded-md bg-black/5 dark:bg-white/10">{theoryExams.length + practicalExams.length}</span>
                 </button>
                 <button
                     onClick={() => setActiveMobileTab('theory')}
-                    className={`flex-1 py-2 px-2.5 text-xs font-mono font-bold rounded-xl transition-all min-h-[38px] ${
+                    className={`flex-auto inline-flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap py-2 px-1.5 min-[360px]:px-2 text-xs max-[359px]:font-sans font-mono font-bold rounded-xl transition-all min-h-[40px] ${
                         activeMobileTab === 'theory'
                             ? 'bg-purple-600 text-white shadow-sm'
-                            : 'text-slate-500 hover:text-purple-600 dark:hover:text-purple-400'
+                            : 'text-slate-500 [@media(hover:hover)]:hover:text-purple-600 dark:[@media(hover:hover)]:hover:text-purple-400'
                     }`}
                 >
-                    Theory ({theoryExams.length})
+                    Theory <span className="text-[10px] px-1.5 py-px rounded-md bg-black/5 dark:bg-white/10">{theoryExams.length}</span>
                 </button>
                 <button
                     onClick={() => setActiveMobileTab('practical')}
-                    className={`flex-1 py-2 px-2.5 text-xs font-mono font-bold rounded-xl transition-all min-h-[38px] ${
+                    className={`flex-auto inline-flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap py-2 px-1.5 min-[360px]:px-2 text-xs max-[359px]:font-sans font-mono font-bold rounded-xl transition-all min-h-[40px] ${
                         activeMobileTab === 'practical'
                             ? 'bg-emerald-600 text-white shadow-sm'
-                            : 'text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400'
+                            : 'text-slate-500 [@media(hover:hover)]:hover:text-emerald-600 dark:[@media(hover:hover)]:hover:text-emerald-400'
                     }`}
                 >
-                    Practical ({practicalExams.length})
+                    Practical <span className="text-[10px] px-1.5 py-px rounded-md bg-black/5 dark:bg-white/10">{practicalExams.length}</span>
                 </button>
             </div>
 
@@ -374,7 +379,7 @@ const ScheduleCard = ({ student }) => {
                                     controls
                                     autoPlay
                                     playsInline
-                                    preload="auto"
+                                    preload="metadata"
                                     className="w-full h-auto object-cover opacity-95 hover:opacity-100 transition-opacity"
                                 />
                             </motion.div>
