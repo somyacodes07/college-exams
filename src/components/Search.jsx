@@ -183,7 +183,10 @@ const Search = ({ onSelectStudent, selectedStudent }) => {
                         setIsFocused(true);
                     }}
                     onKeyDown={handleInputKeyDown}
-                    onFocus={() => setIsFocused(true)}
+                    onFocus={() => {
+                        setIsFocused(true);
+                        if (searchIndex.length === 0) getSearchIndex().then((index) => index.length && setSearchIndex(index));
+                    }}
                     onBlur={() => setIsFocused(false)}
                     placeholder="Your name or roll number"
                     autoComplete="off"
@@ -232,14 +235,16 @@ const Search = ({ onSelectStudent, selectedStudent }) => {
                     >
                         <div className="px-4 py-2 bg-slate-50 dark:bg-white/[0.03] text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center justify-between border-b border-slate-200/60 dark:border-white/5 sticky top-0 z-10">
                             <span className="flex items-center gap-1.5">
-                                {showRecent ? <><History size={11} /> Recent</> : showEmpty ? 'No matches' : `${suggestions.length} match${suggestions.length === 1 ? '' : 'es'}`}
+                                {showRecent ? <><History size={11} /> Recent</> : showEmpty ? (searchIndex.length === 0 ? 'Loading' : 'No matches') : `${suggestions.length} match${suggestions.length === 1 ? '' : 'es'}`}
                             </span>
                             <span className="hidden sm:inline font-normal">↑ ↓ to move · ↵ to open</span>
                         </div>
 
                         {showEmpty && (
                             <div className="px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400">
-                                No student found for “{query.trim()}”. Try part of your first name or the last digits of your roll number.
+                                {searchIndex.length === 0
+                                    ? 'Loading students… one moment.'
+                                    : <>No student found for “{query.trim()}”. Try part of your first name or the last digits of your roll number.</>}
                             </div>
                         )}
 

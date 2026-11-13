@@ -12,7 +12,8 @@
     "test": "node tests/examUtils.test.cjs",
     "preview": "vite preview",
     "db:seed": "node server/seed.cjs",
-    "db:sync-check": "node scripts/sync_check_update.cjs"
+    "db:sync-check": "node scripts/sync_check_update.cjs",
+    "atkt:check": "node scripts/atkt_check.cjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",

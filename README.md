@@ -71,6 +71,21 @@ This application parses data entirely in-memory directly in the browser and push
 
 ---
 
+## 🔒 Student data & ATKT
+
+* **No student data lives in this repo.** `csv_data/` and `src/data/exam_data.json` are gitignored; the site loads students from the API (MongoDB). A test fails CI if they are ever committed again.
+* Add a missing batch to the database from your local export (never deletes):
+    ```bash
+    node scripts/seed_batch.cjs --batch 2026-30 --dry-run   # preview
+    node scripts/seed_batch.cjs --batch 2026-30             # apply
+    ```
+* **ATKT re-exams** are read live from a private Google Sheet whose ID is only in the `ATKT_SHEET_ID` server env var (never in code). Changes appear on the site within ~60s. Check what's filled in / still empty:
+    ```bash
+    npm run atkt:check                 # per-tab summary (date, time, faculty, room)
+    npm run atkt:check -- --missing    # list subjects with empty fields
+    npm run atkt:check -- --watch      # report changes every 60s
+    ```
+
 ## 📦 Deployment
 
 ### Deploying the Full-Stack Application

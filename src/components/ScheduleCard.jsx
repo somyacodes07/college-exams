@@ -4,6 +4,8 @@ import { Calendar, Clock, BookOpen, Code, AlertCircle, MapPin, User as PersonIco
 import { generateICS, downloadICS } from '../utils/icsGenerator';
 import { isExamCompleted, sortExams } from '../utils/dateUtils';
 import tutVideo from '../assets/tut.mp4';
+import AtktSection from './AtktSection';
+import { useAtkt } from '../hooks/useAtkt';
 
 const itemVariants = {
     hidden: { opacity: 0, y: 12 },
@@ -50,10 +52,10 @@ const ExamItem = ({ exam, type }) => {
     return (
         <motion.div
             variants={itemVariants}
-            className={`group relative overflow-hidden bg-white dark:bg-[#0f1422]/90 text-left rounded-2xl p-4 sm:p-5 border border-slate-200/90 dark:border-white/10 ${borderHover} transition-all duration-200 backdrop-blur-xl shadow-sm dark:shadow-none`}
+            className={`group relative overflow-hidden bg-white dark:bg-[#0f1422]/90 text-left rounded-2xl p-4 sm:p-5 border border-slate-200/90 dark:border-white/10 ${borderHover} transition-colors duration-200 shadow-sm dark:shadow-none`}
         >
             {/* Content Container - Subtle opacity when completed, unblurs on hover */}
-            <div className={`flex flex-col gap-3.5 relative z-10 transition-all duration-300 ${completed ? 'opacity-85 hover:opacity-100' : ''}`}>
+            <div className={`flex flex-col gap-3.5 relative z-10 transition-colors duration-300 ${completed ? 'opacity-85 hover:opacity-100' : ''}`}>
                 {/* Subject Header & Badges */}
                 <div className="flex flex-col gap-2.5">
                     <div className="flex items-start justify-between gap-3">
@@ -63,8 +65,8 @@ const ExamItem = ({ exam, type }) => {
 
                         {/* Completed Badge (Responsive inline flex) */}
                         {completed && (
-                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-mono font-bold bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 dark:border-emerald-500/40 shadow-xs uppercase tracking-wider backdrop-blur-md flex-shrink-0">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-mono font-bold bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 dark:border-emerald-500/40 shadow-xs uppercase tracking-wider flex-shrink-0">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
                                 <Check size={12} className="stroke-[3] text-emerald-600 dark:text-emerald-400" />
                                 <span>COMPLETED</span>
                             </div>
@@ -124,11 +126,17 @@ const ScheduleCard = ({ student }) => {
     // Show exams in chronological order (sheets list them in arbitrary order)
     const theoryExams = useMemo(() => sortExams(student?.theory || []), [student]);
     const practicalExams = useMemo(() => sortExams(student?.practical || []), [student]);
+    const { exams: atktExams, status: atktStatus } = useAtkt(student?.rollNo);
+    // Students with ATKT see only their re-exams; their old (finished) schedule is hidden
+    const hasAtkt = atktExams.length > 0;
+    const atktLoading = atktStatus === 'loading';
 
     if (!student) return null;
 
     const handleExport = () => {
-        const icsContent = generateICS(student);
+        const icsContent = generateICS(hasAtkt
+            ? { ...student, theory: [], practical: [], reexams: atktExams }
+            : student);
         downloadICS(`${student.name.replace(/[^a-z0-9]+/gi, '_')}_Schedule.ics`, icsContent);
     };
 
@@ -159,9 +167,9 @@ const ScheduleCard = ({ student }) => {
             className="w-full space-y-6 sm:space-y-8"
         >
             {/* Student Header Card - Big Prominent Roll Number & Compact Calendar Pill */}
-            <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-[#0c101c]/90 border border-slate-200/90 dark:border-white/10 p-5 sm:p-8 backdrop-blur-2xl shadow-xl dark:shadow-none transition-all duration-300">
+            <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-[#0c101c]/90 border border-slate-200/90 dark:border-white/10 p-5 sm:p-8 shadow-xl dark:shadow-none transition-colors duration-300">
                 <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-cyan-500 to-purple-500" />
-                <div className="absolute top-0 right-0 w-72 sm:w-96 h-72 sm:h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute top-0 right-0 w-72 sm:w-96 h-72 sm:h-96 pointer-events-none bg-[radial-gradient(closest-side,rgba(16,185,129,0.12),transparent)]" aria-hidden="true" />
 
                 <div className="flex flex-col md:flex-row items-center justify-between gap-5 sm:gap-6 relative z-10">
                     <div className="text-center md:text-left space-y-3 w-full md:w-auto">
@@ -183,7 +191,7 @@ const ScheduleCard = ({ student }) => {
 
                         {/* PROMINENT ROLL NUMBER BADGE WITH TOUCH-FRIENDLY COPY */}
                         <div className="inline-flex items-center gap-2.5 px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl bg-emerald-100/80 dark:bg-emerald-500/15 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-mono text-xl sm:text-2xl md:text-3xl font-black tracking-wider shadow-sm">
-                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 flex-shrink-0" />
                             <span className="select-all">{student.rollNo}</span>
                             <button
                                 onClick={handleCopyRoll}
@@ -210,113 +218,126 @@ const ScheduleCard = ({ student }) => {
                 </div>
             </div>
 
-            {/* Mobile-Only Segmented Tabs (Hidden on PC/lg screens) */}
-            <div className="flex lg:hidden items-stretch gap-1 p-1 bg-slate-100 dark:bg-[#0c101c]/90 rounded-2xl border border-slate-200/90 dark:border-white/10 w-full max-w-md mx-auto shadow-inner">
-                <button
-                    onClick={() => setActiveMobileTab('all')}
-                    className={`flex-auto inline-flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap py-2 px-1.5 min-[360px]:px-2 text-xs max-[359px]:font-sans font-mono font-bold rounded-xl transition-all min-h-[40px] ${
-                        activeMobileTab === 'all'
-                            ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
-                            : 'text-slate-500 [@media(hover:hover)]:hover:text-slate-900 dark:[@media(hover:hover)]:hover:text-white'
-                    }`}
-                >
-                    All <span className="text-[10px] px-1.5 py-px rounded-md bg-black/5 dark:bg-white/10">{theoryExams.length + practicalExams.length}</span>
-                </button>
-                <button
-                    onClick={() => setActiveMobileTab('theory')}
-                    className={`flex-auto inline-flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap py-2 px-1.5 min-[360px]:px-2 text-xs max-[359px]:font-sans font-mono font-bold rounded-xl transition-all min-h-[40px] ${
-                        activeMobileTab === 'theory'
-                            ? 'bg-purple-600 text-white shadow-sm'
-                            : 'text-slate-500 [@media(hover:hover)]:hover:text-purple-600 dark:[@media(hover:hover)]:hover:text-purple-400'
-                    }`}
-                >
-                    Theory <span className="text-[10px] px-1.5 py-px rounded-md bg-black/5 dark:bg-white/10">{theoryExams.length}</span>
-                </button>
-                <button
-                    onClick={() => setActiveMobileTab('practical')}
-                    className={`flex-auto inline-flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap py-2 px-1.5 min-[360px]:px-2 text-xs max-[359px]:font-sans font-mono font-bold rounded-xl transition-all min-h-[40px] ${
-                        activeMobileTab === 'practical'
-                            ? 'bg-emerald-600 text-white shadow-sm'
-                            : 'text-slate-500 [@media(hover:hover)]:hover:text-emerald-600 dark:[@media(hover:hover)]:hover:text-emerald-400'
-                    }`}
-                >
-                    Practical <span className="text-[10px] px-1.5 py-px rounded-md bg-black/5 dark:bg-white/10">{practicalExams.length}</span>
-                </button>
-            </div>
-
-            {/* Theory vs Practical Split Layout (Side-by-side on PC, Tabbed/Stacked on Mobile) */}
-            <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 items-start">
-                {/* Theory Section */}
-                <div className={`flex-col h-full bg-white dark:bg-[#0c101c]/50 rounded-3xl p-5 sm:p-6 border border-slate-200/90 dark:border-white/10 backdrop-blur-xl shadow-sm dark:shadow-none ${
-                    activeMobileTab === 'practical' ? 'hidden lg:flex' : 'flex'
-                }`}>
-                    <div className="flex items-center justify-between mb-5 sm:mb-6 pb-3.5 sm:pb-4 border-b border-slate-200/60 dark:border-white/5">
-                        <div className="flex items-center gap-2.5 sm:gap-3">
-                            <div className="p-2 sm:p-2.5 bg-purple-100 dark:bg-purple-500/10 rounded-2xl border border-purple-200 dark:border-purple-500/20 text-purple-600 dark:text-purple-400 flex-shrink-0">
-                                <BookOpen size={20} className="sm:w-5 sm:h-5" />
-                            </div>
-                            <div>
-                                <h3 className="text-lg sm:text-xl font-bold font-heading text-slate-900 dark:text-white">Theory Schedule</h3>
-                                <p className="text-[11px] sm:text-xs text-slate-500 font-mono">Classroom & Written Exams</p>
-                            </div>
-                        </div>
-                        <span className="text-[10px] sm:text-xs font-mono font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-purple-100 dark:bg-purple-500/10 text-purple-800 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20 flex-shrink-0">
-                            {theoryExams.length} Papers
-                        </span>
-                    </div>
-
-                    <div className="space-y-3.5 sm:space-y-4 flex-1">
-                        {theoryExams.length === 0 ? (
-                            <div className="h-full min-h-[160px] flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900/30 rounded-2xl p-6 border border-dashed border-slate-200 dark:border-white/10 text-center text-slate-500 dark:text-slate-400">
-                                <AlertCircle className="mb-2 opacity-40 w-8 h-8 sm:w-10 sm:h-10" />
-                                <p className="text-xs sm:text-sm">No theory exams scheduled.</p>
-                            </div>
-                        ) : (
-                            theoryExams.map((exam, idx) => (
-                                <ExamItem key={idx} exam={exam} type="theory" />
-                            ))
-                        )}
-                    </div>
+            {/* ATKT re-exams: only rendered for students who have them */}
+            {atktLoading ? (
+                <div className="rounded-3xl border border-slate-200/90 dark:border-white/10 bg-white dark:bg-[#0c101c]/50 p-5 sm:p-6 space-y-3 animate-pulse" aria-label="Loading schedule">
+                    <div className="h-5 w-40 rounded-lg bg-slate-200 dark:bg-white/10" />
+                    <div className="h-16 rounded-2xl bg-slate-100 dark:bg-white/5" />
+                    <div className="h-16 rounded-2xl bg-slate-100 dark:bg-white/5" />
+                </div>
+            ) : hasAtkt ? (
+                <AtktSection exams={atktExams} />
+            ) : (
+                <>
+                {/* Mobile-Only Segmented Tabs (Hidden on PC/lg screens) */}
+                <div className="flex lg:hidden items-stretch gap-1 p-1 bg-slate-100 dark:bg-[#0c101c]/90 rounded-2xl border border-slate-200/90 dark:border-white/10 w-full max-w-md mx-auto shadow-inner">
+                    <button
+                        onClick={() => setActiveMobileTab('all')}
+                        className={`flex-auto inline-flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap py-2 px-1.5 min-[360px]:px-2 text-xs max-[359px]:font-sans font-mono font-bold rounded-xl transition-all min-h-[40px] ${
+                            activeMobileTab === 'all'
+                                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
+                                : 'text-slate-500 [@media(hover:hover)]:hover:text-slate-900 dark:[@media(hover:hover)]:hover:text-white'
+                        }`}
+                    >
+                        All <span className="text-[10px] px-1.5 py-px rounded-md bg-black/5 dark:bg-white/10">{theoryExams.length + practicalExams.length}</span>
+                    </button>
+                    <button
+                        onClick={() => setActiveMobileTab('theory')}
+                        className={`flex-auto inline-flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap py-2 px-1.5 min-[360px]:px-2 text-xs max-[359px]:font-sans font-mono font-bold rounded-xl transition-all min-h-[40px] ${
+                            activeMobileTab === 'theory'
+                                ? 'bg-purple-600 text-white shadow-sm'
+                                : 'text-slate-500 [@media(hover:hover)]:hover:text-purple-600 dark:[@media(hover:hover)]:hover:text-purple-400'
+                        }`}
+                    >
+                        Theory <span className="text-[10px] px-1.5 py-px rounded-md bg-black/5 dark:bg-white/10">{theoryExams.length}</span>
+                    </button>
+                    <button
+                        onClick={() => setActiveMobileTab('practical')}
+                        className={`flex-auto inline-flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap py-2 px-1.5 min-[360px]:px-2 text-xs max-[359px]:font-sans font-mono font-bold rounded-xl transition-all min-h-[40px] ${
+                            activeMobileTab === 'practical'
+                                ? 'bg-emerald-600 text-white shadow-sm'
+                                : 'text-slate-500 [@media(hover:hover)]:hover:text-emerald-600 dark:[@media(hover:hover)]:hover:text-emerald-400'
+                        }`}
+                    >
+                        Practical <span className="text-[10px] px-1.5 py-px rounded-md bg-black/5 dark:bg-white/10">{practicalExams.length}</span>
+                    </button>
                 </div>
 
-                {/* Practical Section */}
-                <div className={`flex-col h-full bg-white dark:bg-[#0c101c]/50 rounded-3xl p-5 sm:p-6 border border-slate-200/90 dark:border-white/10 backdrop-blur-xl shadow-sm dark:shadow-none ${
-                    activeMobileTab === 'theory' ? 'hidden lg:flex' : 'flex'
-                }`}>
-                    <div className="flex items-center justify-between mb-5 sm:mb-6 pb-3.5 sm:pb-4 border-b border-slate-200/60 dark:border-white/5">
-                        <div className="flex items-center gap-2.5 sm:gap-3">
-                            <div className="p-2 sm:p-2.5 bg-emerald-100 dark:bg-emerald-500/10 rounded-2xl border border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex-shrink-0">
-                                <Code size={20} className="sm:w-5 sm:h-5" />
+                {/* Theory vs Practical Split Layout (Side-by-side on PC, Tabbed/Stacked on Mobile) */}
+                <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 items-start">
+                    {/* Theory Section */}
+                    <div className={`flex-col h-full bg-white dark:bg-[#0c101c]/50 rounded-3xl p-5 sm:p-6 border border-slate-200/90 dark:border-white/10 shadow-sm dark:shadow-none ${
+                        activeMobileTab === 'practical' ? 'hidden lg:flex' : 'flex'
+                    }`}>
+                        <div className="flex items-center justify-between mb-5 sm:mb-6 pb-3.5 sm:pb-4 border-b border-slate-200/60 dark:border-white/5">
+                            <div className="flex items-center gap-2.5 sm:gap-3">
+                                <div className="p-2 sm:p-2.5 bg-purple-100 dark:bg-purple-500/10 rounded-2xl border border-purple-200 dark:border-purple-500/20 text-purple-600 dark:text-purple-400 flex-shrink-0">
+                                    <BookOpen size={20} className="sm:w-5 sm:h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg sm:text-xl font-bold font-heading text-slate-900 dark:text-white">Theory Schedule</h3>
+                                    <p className="text-[11px] sm:text-xs text-slate-500 font-mono">Classroom & Written Exams</p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 className="text-lg sm:text-xl font-bold font-heading text-slate-900 dark:text-white">Practical Viva</h3>
-                                <p className="text-[11px] sm:text-xs text-slate-500 font-mono">Lab & Examiner Evaluation</p>
-                            </div>
+                            <span className="text-[10px] sm:text-xs font-mono font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-purple-100 dark:bg-purple-500/10 text-purple-800 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20 flex-shrink-0">
+                                {theoryExams.length} Papers
+                            </span>
                         </div>
-                        <span className="text-[10px] sm:text-xs font-mono font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 flex-shrink-0">
-                            {practicalExams.length} Slots
-                        </span>
+
+                        <div className="space-y-3.5 sm:space-y-4 flex-1">
+                            {theoryExams.length === 0 ? (
+                                <div className="h-full min-h-[160px] flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900/30 rounded-2xl p-6 border border-dashed border-slate-200 dark:border-white/10 text-center text-slate-500 dark:text-slate-400">
+                                    <AlertCircle className="mb-2 opacity-40 w-8 h-8 sm:w-10 sm:h-10" />
+                                    <p className="text-xs sm:text-sm">No theory exams scheduled.</p>
+                                </div>
+                            ) : (
+                                theoryExams.map((exam, idx) => (
+                                    <ExamItem key={idx} exam={exam} type="theory" />
+                                ))
+                            )}
+                        </div>
                     </div>
 
-                    <div className="space-y-3.5 sm:space-y-4 flex-1">
-                        {practicalExams.length === 0 ? (
-                            <div className="h-full min-h-[160px] flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900/30 rounded-2xl p-6 border border-dashed border-slate-200 dark:border-white/10 text-center text-slate-500 dark:text-slate-400">
-                                <AlertCircle className="mb-2 opacity-40 w-8 h-8 sm:w-10 sm:h-10" />
-                                <p className="text-xs sm:text-sm">No practical exams scheduled.</p>
+                    {/* Practical Section */}
+                    <div className={`flex-col h-full bg-white dark:bg-[#0c101c]/50 rounded-3xl p-5 sm:p-6 border border-slate-200/90 dark:border-white/10 shadow-sm dark:shadow-none ${
+                        activeMobileTab === 'theory' ? 'hidden lg:flex' : 'flex'
+                    }`}>
+                        <div className="flex items-center justify-between mb-5 sm:mb-6 pb-3.5 sm:pb-4 border-b border-slate-200/60 dark:border-white/5">
+                            <div className="flex items-center gap-2.5 sm:gap-3">
+                                <div className="p-2 sm:p-2.5 bg-emerald-100 dark:bg-emerald-500/10 rounded-2xl border border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex-shrink-0">
+                                    <Code size={20} className="sm:w-5 sm:h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg sm:text-xl font-bold font-heading text-slate-900 dark:text-white">Practical Viva</h3>
+                                    <p className="text-[11px] sm:text-xs text-slate-500 font-mono">Lab & Examiner Evaluation</p>
+                                </div>
                             </div>
-                        ) : (
-                            practicalExams.map((exam, idx) => (
-                                <ExamItem key={idx} exam={exam} type="practical" />
-                            ))
-                        )}
+                            <span className="text-[10px] sm:text-xs font-mono font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 flex-shrink-0">
+                                {practicalExams.length} Slots
+                            </span>
+                        </div>
+
+                        <div className="space-y-3.5 sm:space-y-4 flex-1">
+                            {practicalExams.length === 0 ? (
+                                <div className="h-full min-h-[160px] flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900/30 rounded-2xl p-6 border border-dashed border-slate-200 dark:border-white/10 text-center text-slate-500 dark:text-slate-400">
+                                    <AlertCircle className="mb-2 opacity-40 w-8 h-8 sm:w-10 sm:h-10" />
+                                    <p className="text-xs sm:text-sm">No practical exams scheduled.</p>
+                                </div>
+                            ) : (
+                                practicalExams.map((exam, idx) => (
+                                    <ExamItem key={idx} exam={exam} type="practical" />
+                                ))
+                            )}
+                        </div>
                     </div>
                 </div>
-            </div>
+                </>
+            )}
 
             {/* Calendar Tutorial Card */}
             <motion.div
                 variants={itemVariants}
-                className="relative overflow-hidden rounded-3xl bg-white dark:bg-[#0c101c]/90 border border-slate-200/90 dark:border-white/10 p-5 sm:p-8 backdrop-blur-2xl shadow-xl dark:shadow-none"
+                className="relative overflow-hidden rounded-3xl bg-white dark:bg-[#0c101c]/90 border border-slate-200/90 dark:border-white/10 p-5 sm:p-8 shadow-xl dark:shadow-none"
             >
                 <div className="flex flex-col md:flex-row items-center justify-between gap-6 sm:gap-8">
                     <div className="space-y-3 text-center md:text-left w-full md:max-w-lg">

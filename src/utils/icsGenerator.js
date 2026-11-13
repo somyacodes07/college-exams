@@ -60,15 +60,17 @@ export const generateICS = (student, { includeCompleted = true } = {}) => {
     if (!parsed) return;
     if (!includeCompleted && parsed.end.getTime() < Date.now()) return;
 
-    const label = kind === 'theory' ? 'Theory' : 'Practical';
+    const label = kind === 'theory' ? 'Theory' : kind === 'reexam' ? 'Re-exam' : 'Practical';
     const details = [`${label} exam: ${exam.subject}`];
-    if (hasValue(exam.professor)) details.push(`Examiner: ${exam.professor}`);
+    if (hasValue(exam.examType)) details.push(`Type: ${exam.examType}`);
+    if (hasValue(exam.professor || exam.faculty)) details.push(`Examiner: ${exam.professor || exam.faculty}`);
     if (hasValue(exam.panel)) details.push(`Panel: ${exam.panel}`);
     if (exam.time) details.push(`Time: ${exam.time}`);
     details.push(`Roll No: ${student.rollNo}`);
 
-    const location = hasValue(exam.location) ? exam.location : kind === 'theory' ? 'Exam Hall' : 'Lab';
-    const uid = `${hash(`${student.rollNo}|${kind}|${exam.subject}|${cleanDateLabel(exam.date)}|${exam.time}`)}@exam-scheduler`;
+    const room = exam.location || exam.classroom;
+    const location = hasValue(room) ? room : kind === 'practical' ? 'Lab' : 'Exam Hall';
+    const uid = `${hash(`${student.rollNo}|${kind}|${exam.subject}|${exam.examType || ''}|${cleanDateLabel(exam.date)}|${exam.time}`)}@exam-scheduler`;
 
     lines.push(
       'BEGIN:VEVENT',
@@ -96,6 +98,7 @@ export const generateICS = (student, { includeCompleted = true } = {}) => {
 
   (student.theory || []).forEach((exam) => addExam(exam, 'theory'));
   (student.practical || []).forEach((exam) => addExam(exam, 'practical'));
+  (student.reexams || []).forEach((exam) => addExam(exam, 'reexam'));
 
   lines.push('END:VCALENDAR');
   return lines.map(foldLine).join('\r\n');
