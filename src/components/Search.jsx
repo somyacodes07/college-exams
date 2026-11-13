@@ -160,7 +160,8 @@ const Search = ({ onSelectStudent, selectedStudent }) => {
 
     return (
         <div className="relative w-full max-w-2xl z-30">
-            <div className={`flex items-center bg-paper rounded-lg border transition-colors ${isFocused ? 'border-ink ring-2 ring-ink/15' : 'border-rule hover:border-ink-faint'}`}>
+            {/* One focus indicator: the box itself (the input's own outline is off) */}
+            <div className="flex items-center bg-paper rounded-lg border border-rule transition-colors hover:border-ink-faint focus-within:border-ink! focus-within:ring-2 focus-within:ring-ink/15">
                 <div className="pl-4 pr-1 flex-shrink-0 text-ink-faint" aria-hidden="true">
                     {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <SearchIcon className="w-5 h-5" />}
                 </div>

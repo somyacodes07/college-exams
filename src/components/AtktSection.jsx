@@ -120,7 +120,6 @@ const AtktSection = ({ exams, nextExam, now: nowProp }) => {
   const semGroup = groups.find((g) => g.semester === (picked?.semester ?? initial.semester)) || groups[0];
   const kindGroup = semGroup.kinds.find((k) => k.kind === (picked?.kind ?? initial.kind)) || semGroup.kinds[0];
   const upcoming = exams.filter((e) => !isExamCompleted(e, now)).length;
-  const doneShare = exams.length ? (exams.length - upcoming) / exams.length : 0;
 
   return (
     <section aria-label="ATKT re-exam schedule" className="bg-paper border border-rule rounded-xl px-4 sm:px-5 pt-4 pb-2 print:border-0 print:px-0">
@@ -132,10 +131,6 @@ const AtktSection = ({ exams, nextExam, now: nowProp }) => {
         <span className="text-[14px] text-ink-faint tnum">
           {upcoming > 0 ? `${upcoming} of ${exams.length} to go` : 'All done'}
         </span>
-      </div>
-      {/* How far through the re-exams the student is */}
-      <div className="mt-2 h-1.5 rounded-full bg-reexam-tint overflow-hidden" role="progressbar" aria-label="Re-exams finished" aria-valuemin={0} aria-valuemax={exams.length} aria-valuenow={exams.length - upcoming}>
-        <div className={`h-full ${KIND.reexam.dot} transition-[width] duration-500`} style={{ width: `${Math.round(doneShare * 100)}%` }} />
       </div>
 
       {groups.length > 1 && (
