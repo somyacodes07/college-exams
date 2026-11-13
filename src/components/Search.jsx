@@ -17,7 +17,13 @@ const readRecent = () => {
 
 const saveRecent = (student) => {
     try {
-        const entry = { name: student.name, rollNo: String(student.rollNo), batch: student.batch, cohort: student.cohort || '' };
+        const entry = {
+            name: student.name,
+            rollNo: String(student.rollNo),
+            batch: student.batch,
+            cohort: student.cohort || '',
+            ...(student.rollPending ? { rollPending: true, officialRollNo: student.officialRollNo } : {}),
+        };
         const next = [entry, ...readRecent().filter((s) => s.rollNo !== entry.rollNo)].slice(0, MAX_RECENT);
         localStorage.setItem(RECENT_KEY, JSON.stringify(next));
         return next;
@@ -275,7 +281,8 @@ const Search = ({ onSelectStudent, selectedStudent }) => {
                                             </div>
                                             <div className="text-xs font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5 truncate">
                                                 <Hash size={10} className="flex-shrink-0" />
-                                                <span className="truncate"><Highlight text={student.rollNo} query={showRecent ? '' : query} /></span>
+                                                <span className="truncate"><Highlight text={student.officialRollNo || student.rollNo} query={showRecent ? '' : query} /></span>
+                                                {student.rollPending && <span className="flex-shrink-0 text-[10px] font-sans font-semibold text-amber-600 dark:text-amber-400">verifying</span>}
                                             </div>
                                         </div>
                                     </div>

@@ -78,6 +78,9 @@ function toIndexEntry(s) {
     rollNo,
     batch: s.batch,
     cohort,
+    // Provisional records (roll number shared with another student, awaiting
+    // the official list) keep a unique internal ID but display the real roll
+    ...(s.rollPending ? { rollPending: true, officialRollNo: String(s.officialRollNo || '') } : {}),
     // Pre-normalised fields keep per-keystroke search cheap
     _name: name.toLowerCase(),
     _roll: rollNo.toLowerCase(),

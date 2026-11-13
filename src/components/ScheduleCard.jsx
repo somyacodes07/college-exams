@@ -52,6 +52,8 @@ const ExamItem = ({ exam, type }) => {
     return (
         <motion.div
             variants={itemVariants}
+            initial="hidden"
+            animate="show"
             className={`group relative overflow-hidden bg-white dark:bg-[#0f1422]/90 text-left rounded-2xl p-4 sm:p-5 border border-slate-200/90 dark:border-white/10 ${borderHover} transition-colors duration-200 shadow-sm dark:shadow-none`}
         >
             {/* Content Container - Subtle opacity when completed, unblurs on hover */}
@@ -142,7 +144,7 @@ const ScheduleCard = ({ student }) => {
 
     const handleCopyRoll = async () => {
         try {
-            await navigator.clipboard.writeText(student.rollNo);
+            await navigator.clipboard.writeText(student.officialRollNo || student.rollNo);
             setIsCopied(true);
             setTimeout(() => setIsCopied(false), 2000);
         } catch {
@@ -192,7 +194,7 @@ const ScheduleCard = ({ student }) => {
                         {/* PROMINENT ROLL NUMBER BADGE WITH TOUCH-FRIENDLY COPY */}
                         <div className="inline-flex items-center gap-2.5 px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl bg-emerald-100/80 dark:bg-emerald-500/15 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-mono text-xl sm:text-2xl md:text-3xl font-black tracking-wider shadow-sm">
                             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 flex-shrink-0" />
-                            <span className="select-all">{student.rollNo}</span>
+                            <span className="select-all">{student.officialRollNo || student.rollNo}</span>
                             <button
                                 onClick={handleCopyRoll}
                                 className="ml-1 min-w-[36px] min-h-[36px] flex items-center justify-center hover:bg-emerald-200 dark:hover:bg-emerald-500/20 rounded-xl transition-colors text-emerald-700 dark:text-emerald-400 active:scale-90"
@@ -202,6 +204,11 @@ const ScheduleCard = ({ student }) => {
                                 {isCopied ? <Check size={18} className="text-emerald-600 dark:text-emerald-400" /> : <Copy size={18} />}
                             </button>
                         </div>
+                        {student.rollPending && (
+                            <p className="max-w-sm mx-auto md:mx-0 text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl px-3 py-2">
+                                This roll number is being verified with the college. Your schedule below is correct.
+                            </p>
+                        )}
                     </div>
 
                     {/* COMPACT CALENDAR BUTTON */}

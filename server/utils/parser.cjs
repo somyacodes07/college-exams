@@ -86,6 +86,25 @@ function getLines(text) {
 }
 
 /**
+ * Tidies a student name: trims, collapses spaces, capitalises words typed in
+ * all lowercase ("sairaj jadhav" -> "Sairaj Jadhav") and fixes stray caps
+ * ("NIdhish" -> "Nidhish"). Words already in normal/mixed case are kept.
+ */
+function tidyName(name) {
+  return String(name || '')
+    .replace(/\u00A0/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split(' ')
+    .map((w) => {
+      if (/^[a-z][a-z'.-]*$/.test(w)) return w[0].toUpperCase() + w.slice(1);
+      if (/^[A-Z]{2}[a-z]{2,}$/.test(w)) return w[0] + w.slice(1).toLowerCase();
+      return w;
+    })
+    .join(' ');
+}
+
+/**
  * Maps student names to roll numbers from Mapping CSV.
  */
 function parseMapping(csvText) {
@@ -127,7 +146,7 @@ function parseMapping(csvText) {
     const cols = parseCsvLine(lines[i]);
     if (cols.length > Math.max(rollColIdx, nameColIdx)) {
       const rollNo = cols[rollColIdx].trim();
-      const name = cols[nameColIdx].trim();
+      const name = tidyName(cols[nameColIdx]);
       const cohort = (cohortColIdx !== -1 && cols[cohortColIdx]) ? cols[cohortColIdx].trim() : '';
       
       const isHeaderLabel = rollNo.toLowerCase().includes('roll') || 
@@ -554,7 +573,7 @@ function parsePractical(csvText, students, markers = {}) {
 
         if (!student) {
           // Student not found in mapping (e.g. unmapped backlog student)
-          const cleanName = studentName.replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
+          const cleanName = tidyName(studentName);
           const autoRoll = `EXT-${cleanName.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()}`;
           student = {
             rollNo: autoRoll,
@@ -775,7 +794,7 @@ async function parseCsvData(mappingCsv, theoryCsv, practicalCsv, options = {}) {
       for (const k of known) {
         if (!k || !k.rollNo || !k.name) continue;
         const rollNo = String(k.rollNo);
-        students.set(rollNo, { rollNo, name: k.name, cohort: k.cohort || '', theory: [], practical: [] });
+        students.set(rollNo, { rollNo, name: tidyName(k.name), cohort: k.cohort || '', theory: [], practical: [] });
       }
     } else if (fs.existsSync(localMapping)) {
       console.log(`Using local mapping file for batch ${options.batch}...`);
@@ -809,6 +828,7 @@ async function parseCsvData(mappingCsv, theoryCsv, practicalCsv, options = {}) {
 }
 
 module.exports = {
+  tidyName,
   getCsvUrl,
   fetchCsvText,
   parseCsvData

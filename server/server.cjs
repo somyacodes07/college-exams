@@ -299,7 +299,7 @@ app.use(connectDB);
 app.get('/api/students/search-index', async (req, res) => {
   try {
     res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=86400');
-    const students = await Student.find({}, 'name rollNo batch cohort').lean();
+    const students = await Student.find({}, 'name rollNo batch cohort officialRollNo rollPending').lean();
     res.json(students);
   } catch (error) {
     console.error('Error getting search index:', error);
