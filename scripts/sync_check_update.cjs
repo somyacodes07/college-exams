@@ -92,6 +92,7 @@ async function syncAndCheck() {
       const groqApiKey = process.env.GROQ_API_KEY;
       const parsedStudents = await parseCsvData(mappingCsv, theoryCsv, practicalCsv, {
         batch,
+        knownStudents: mappingCsv ? [] : await Student.find({ batch }, 'rollNo name cohort').lean(),
         useAi: !!config.useAi,
         groqApiKey
       });

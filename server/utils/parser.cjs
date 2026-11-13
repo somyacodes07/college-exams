@@ -764,12 +764,26 @@ async function parseCsvData(mappingCsv, theoryCsv, practicalCsv, options = {}) {
   // 1. Process mapping or dynamically generate it
   let students;
   if (!mappingCsv || mappingCsv.trim().length === 0 || mappingCsv.trim() === 'Roll Number,Name of student') {
+    // No roll-number sheet: match names against the students already stored
+    // for this batch (private DB, works locally and on Vercel). Student data
+    // files are no longer in the repo, so local CSVs are only a dev fallback.
+    const known = Array.isArray(options.knownStudents) ? options.knownStudents : [];
     const localMapping = path.join(__dirname, `../../csv_data/mapping_${options.batch || '2025-29'}.csv`);
-    if (fs.existsSync(localMapping)) {
+    if (known.length > 0) {
+      console.log(`Using ${known.length} existing database students as the roll-number list for batch ${options.batch}...`);
+      students = new Map();
+      for (const k of known) {
+        if (!k || !k.rollNo || !k.name) continue;
+        const rollNo = String(k.rollNo);
+        students.set(rollNo, { rollNo, name: k.name, cohort: k.cohort || '', theory: [], practical: [] });
+      }
+    } else if (fs.existsSync(localMapping)) {
       console.log(`Using local mapping file for batch ${options.batch}...`);
       students = parseMapping(fs.readFileSync(localMapping, 'utf8'));
     } else {
-      console.log(`⚠️ Mapping CSV not provided. Dynamically generating mapping from practical schedule...`);
+      // Last resort only: roll numbers are GUESSED from sorted names. Add a
+      // roll-number sheet link for the batch to avoid this.
+      console.warn(`⚠️ No roll-number list for batch ${options.batch}: generating roll numbers from names (may be wrong).`);
       students = generateDynamicMapping(practicalCsv, options.batch || '2025-29');
     }
   } else {
