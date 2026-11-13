@@ -426,6 +426,17 @@ async function replaceBatch(batch, studentsData) {
     if (!s || !s.rollNo || !s.name) continue;
     byRoll.set(String(s.rollNo), { ...s, rollNo: String(s.rollNo), batch });
   }
+  // A roll number already in another batch stays there (e.g. direct second-year
+  // diploma admissions with 2026 roll numbers who also appear in first-year sheets)
+  const owned = await Student.find(
+    { rollNo: { $in: [...byRoll.keys()] }, batch: { $ne: batch } },
+    'rollNo batch'
+  ).lean();
+  for (const s of owned) {
+    console.log(`Sync ${batch}: keeping ${s.rollNo} in ${s.batch} (not overwritten)`);
+    byRoll.delete(String(s.rollNo));
+  }
+
   const records = [...byRoll.values()];
   if (records.length === 0) return 0;
 
