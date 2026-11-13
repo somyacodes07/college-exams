@@ -30,3 +30,7 @@ dist-ssr
 
 # Server sync configuration (contains Google Sheet URLs)
 server/config.json
+
+# Student data must never be committed (public repo). Keep local copies only.
+csv_data/
+src/data/exam_data.json

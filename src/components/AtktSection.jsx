@@ -95,13 +95,18 @@ const Row = ({ exam, kind }) => {
             </span>
           )}
         </div>
-        {(showType || exam.faculty || exam.classroom) && (
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-            {showType && <span className="font-medium text-rose-700 dark:text-rose-300">{exam.examType}</span>}
-            {exam.faculty && <span className="inline-flex items-center gap-1"><PersonIcon size={11} />{exam.faculty}</span>}
-            {exam.classroom && <span className="inline-flex items-center gap-1"><MapPin size={11} />{exam.classroom}</span>}
-          </div>
-        )}
+        {showType && <p className="mt-0.5 text-xs font-medium text-rose-700 dark:text-rose-300">{exam.examType}</p>}
+        {/* Faculty and room are always shown so students know what's still pending */}
+        <dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-xs">
+          <dt className="inline-flex items-center gap-1 text-slate-500 dark:text-slate-400"><PersonIcon size={11} />Faculty</dt>
+          <dd className={exam.faculty ? 'font-medium text-slate-800 dark:text-slate-200' : 'italic text-slate-400 dark:text-slate-500'}>
+            {exam.faculty || 'To be announced'}
+          </dd>
+          <dt className="inline-flex items-center gap-1 text-slate-500 dark:text-slate-400"><MapPin size={11} />Room</dt>
+          <dd className={exam.classroom ? 'font-semibold text-slate-800 dark:text-slate-200' : 'italic text-slate-400 dark:text-slate-500'}>
+            {exam.classroom || 'To be announced'}
+          </dd>
+        </dl>
       </div>
     </li>
   );

@@ -1,5 +1,3 @@
-import localExamData from '../data/exam_data.json';
-
 /**
  * API utility to query the Node.js/Express backend.
  * Uses JWT tokens for admin authentication — password is never stored client-side.
@@ -52,8 +50,9 @@ function getAuthHeaders() {
 }
 
 /**
- * In-memory cache initialised from the bundled exam data, so search and
- * schedules render instantly; the server refreshes it in the background.
+ * In-memory cache filled from the API. Student data is no longer bundled into
+ * the site (it used to ship ~1 MB of names to every visitor and live in the
+ * public repo); the search index is a small, HTTP-cached API response.
  */
 const studentCacheMap = new Map();
 let searchIndexCache = [];
@@ -113,7 +112,7 @@ function initCache(data) {
   searchIndexCache = newIndex;
 }
 
-initCache(localExamData);
+
 
 const hasExams = (s) => s && (Array.isArray(s.theory) || Array.isArray(s.practical));
 
@@ -169,24 +168,46 @@ export async function searchStudents(query) {
 
 let indexRefresh = null;
 
-/**
- * Returns the cached search index immediately and refreshes it from the
- * server once per page load. Use subscribeToIndex() to receive the refresh.
- */
-export async function getSearchIndex() {
+function loadIndex() {
   if (!indexRefresh) {
     indexRefresh = fetch(`${API_BASE}/api/students/search-index`)
-      .then((res) => (res.ok ? res.json() : null))
+      .then((res) => {
+        if (!res.ok) throw new Error(`Search index failed (${res.status})`);
+        return res.json();
+      })
       .then((serverIndex) => {
         if (Array.isArray(serverIndex) && serverIndex.length > 0) {
           initCache(serverIndex);
           serverCount = serverIndex.length;
           notify();
         }
+        return searchIndexCache;
       })
-      .catch(() => {});
+      .catch((err) => {
+        indexRefresh = null; // allow a retry on the next call
+        throw err;
+      });
   }
-  return searchIndexCache;
+  return indexRefresh;
+}
+
+// Start downloading the index as soon as the app loads
+if (typeof window !== 'undefined') loadIndex().catch(() => {});
+
+/** True once the search index has been loaded from the server. */
+export const isIndexReady = () => searchIndexCache.length > 0;
+
+/**
+ * Resolves with the search index (loading it on first use). Use
+ * subscribeToIndex() to hear about later refreshes.
+ */
+export async function getSearchIndex() {
+  if (searchIndexCache.length > 0) return searchIndexCache;
+  try {
+    return await loadIndex();
+  } catch {
+    return searchIndexCache;
+  }
 }
 
 /** Gets a student's full schedule by roll number (cache first, server fallback). */

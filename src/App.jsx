@@ -135,7 +135,7 @@ function App() {
         className="fixed top-0 inset-x-0 z-50 px-3 sm:px-4"
         style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
       >
-        <div className="max-w-5xl mx-auto pl-3.5 pr-1.5 py-1.5 sm:pl-5 sm:pr-2 rounded-full bg-white/90 dark:bg-[#0c101c]/85 backdrop-blur-xl border border-slate-200/90 dark:border-white/10 shadow-lg shadow-slate-200/40 dark:shadow-none flex justify-between items-center">
+        <div className="max-w-5xl mx-auto pl-3.5 pr-1.5 py-1.5 sm:pl-5 sm:pr-2 rounded-full bg-white/95 dark:bg-[#0c101c]/95 md:bg-white/85 md:dark:bg-[#0c101c]/80 md:backdrop-blur-lg border border-slate-200/90 dark:border-white/10 shadow-lg shadow-slate-200/40 dark:shadow-none flex justify-between items-center">
           <button
             onClick={() => handleSelectStudent(null)}
             className="flex items-center gap-2 min-w-0 text-left"

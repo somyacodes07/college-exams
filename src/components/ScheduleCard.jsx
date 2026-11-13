@@ -52,10 +52,10 @@ const ExamItem = ({ exam, type }) => {
     return (
         <motion.div
             variants={itemVariants}
-            className={`group relative overflow-hidden bg-white dark:bg-[#0f1422]/90 text-left rounded-2xl p-4 sm:p-5 border border-slate-200/90 dark:border-white/10 ${borderHover} transition-all duration-200 backdrop-blur-xl shadow-sm dark:shadow-none`}
+            className={`group relative overflow-hidden bg-white dark:bg-[#0f1422]/90 text-left rounded-2xl p-4 sm:p-5 border border-slate-200/90 dark:border-white/10 ${borderHover} transition-colors duration-200 shadow-sm dark:shadow-none`}
         >
             {/* Content Container - Subtle opacity when completed, unblurs on hover */}
-            <div className={`flex flex-col gap-3.5 relative z-10 transition-all duration-300 ${completed ? 'opacity-85 hover:opacity-100' : ''}`}>
+            <div className={`flex flex-col gap-3.5 relative z-10 transition-colors duration-300 ${completed ? 'opacity-85 hover:opacity-100' : ''}`}>
                 {/* Subject Header & Badges */}
                 <div className="flex flex-col gap-2.5">
                     <div className="flex items-start justify-between gap-3">
@@ -65,8 +65,8 @@ const ExamItem = ({ exam, type }) => {
 
                         {/* Completed Badge (Responsive inline flex) */}
                         {completed && (
-                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-mono font-bold bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 dark:border-emerald-500/40 shadow-xs uppercase tracking-wider backdrop-blur-md flex-shrink-0">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-mono font-bold bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 dark:border-emerald-500/40 shadow-xs uppercase tracking-wider flex-shrink-0">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
                                 <Check size={12} className="stroke-[3] text-emerald-600 dark:text-emerald-400" />
                                 <span>COMPLETED</span>
                             </div>
@@ -167,9 +167,9 @@ const ScheduleCard = ({ student }) => {
             className="w-full space-y-6 sm:space-y-8"
         >
             {/* Student Header Card - Big Prominent Roll Number & Compact Calendar Pill */}
-            <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-[#0c101c]/90 border border-slate-200/90 dark:border-white/10 p-5 sm:p-8 backdrop-blur-2xl shadow-xl dark:shadow-none transition-all duration-300">
+            <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-[#0c101c]/90 border border-slate-200/90 dark:border-white/10 p-5 sm:p-8 shadow-xl dark:shadow-none transition-colors duration-300">
                 <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-cyan-500 to-purple-500" />
-                <div className="absolute top-0 right-0 w-72 sm:w-96 h-72 sm:h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute top-0 right-0 w-72 sm:w-96 h-72 sm:h-96 pointer-events-none bg-[radial-gradient(closest-side,rgba(16,185,129,0.12),transparent)]" aria-hidden="true" />
 
                 <div className="flex flex-col md:flex-row items-center justify-between gap-5 sm:gap-6 relative z-10">
                     <div className="text-center md:text-left space-y-3 w-full md:w-auto">
@@ -191,7 +191,7 @@ const ScheduleCard = ({ student }) => {
 
                         {/* PROMINENT ROLL NUMBER BADGE WITH TOUCH-FRIENDLY COPY */}
                         <div className="inline-flex items-center gap-2.5 px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl bg-emerald-100/80 dark:bg-emerald-500/15 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-mono text-xl sm:text-2xl md:text-3xl font-black tracking-wider shadow-sm">
-                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 flex-shrink-0" />
                             <span className="select-all">{student.rollNo}</span>
                             <button
                                 onClick={handleCopyRoll}
@@ -266,7 +266,7 @@ const ScheduleCard = ({ student }) => {
                 {/* Theory vs Practical Split Layout (Side-by-side on PC, Tabbed/Stacked on Mobile) */}
                 <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 items-start">
                     {/* Theory Section */}
-                    <div className={`flex-col h-full bg-white dark:bg-[#0c101c]/50 rounded-3xl p-5 sm:p-6 border border-slate-200/90 dark:border-white/10 backdrop-blur-xl shadow-sm dark:shadow-none ${
+                    <div className={`flex-col h-full bg-white dark:bg-[#0c101c]/50 rounded-3xl p-5 sm:p-6 border border-slate-200/90 dark:border-white/10 shadow-sm dark:shadow-none ${
                         activeMobileTab === 'practical' ? 'hidden lg:flex' : 'flex'
                     }`}>
                         <div className="flex items-center justify-between mb-5 sm:mb-6 pb-3.5 sm:pb-4 border-b border-slate-200/60 dark:border-white/5">
@@ -299,7 +299,7 @@ const ScheduleCard = ({ student }) => {
                     </div>
 
                     {/* Practical Section */}
-                    <div className={`flex-col h-full bg-white dark:bg-[#0c101c]/50 rounded-3xl p-5 sm:p-6 border border-slate-200/90 dark:border-white/10 backdrop-blur-xl shadow-sm dark:shadow-none ${
+                    <div className={`flex-col h-full bg-white dark:bg-[#0c101c]/50 rounded-3xl p-5 sm:p-6 border border-slate-200/90 dark:border-white/10 shadow-sm dark:shadow-none ${
                         activeMobileTab === 'theory' ? 'hidden lg:flex' : 'flex'
                     }`}>
                         <div className="flex items-center justify-between mb-5 sm:mb-6 pb-3.5 sm:pb-4 border-b border-slate-200/60 dark:border-white/5">
@@ -337,7 +337,7 @@ const ScheduleCard = ({ student }) => {
             {/* Calendar Tutorial Card */}
             <motion.div
                 variants={itemVariants}
-                className="relative overflow-hidden rounded-3xl bg-white dark:bg-[#0c101c]/90 border border-slate-200/90 dark:border-white/10 p-5 sm:p-8 backdrop-blur-2xl shadow-xl dark:shadow-none"
+                className="relative overflow-hidden rounded-3xl bg-white dark:bg-[#0c101c]/90 border border-slate-200/90 dark:border-white/10 p-5 sm:p-8 shadow-xl dark:shadow-none"
             >
                 <div className="flex flex-col md:flex-row items-center justify-between gap-6 sm:gap-8">
                     <div className="space-y-3 text-center md:text-left w-full md:max-w-lg">

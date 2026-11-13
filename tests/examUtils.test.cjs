@@ -4,40 +4,44 @@ const assert = require('assert');
 
 console.log('🧪 Running Exam Scheduler Automated CI/CD Tests...\n');
 
-// Test 1: Data Integrity Check for exam_data.json
+// Test 1: Data integrity of the local exam data export.
+// Student data is NOT committed to the public repo (it is gitignored), so this
+// check only runs on machines that have a local copy (e.g. after a DB export).
 const examDataPath = path.join(__dirname, '../src/data/exam_data.json');
-assert.strictEqual(fs.existsSync(examDataPath), true, 'src/data/exam_data.json file should exist');
+const hasLocalData = fs.existsSync(examDataPath);
+const examData = hasLocalData ? JSON.parse(fs.readFileSync(examDataPath, 'utf8')) : [];
 
-const rawData = fs.readFileSync(examDataPath, 'utf8');
-const examData = JSON.parse(rawData);
-
-assert.strictEqual(Array.isArray(examData), true, 'exam_data.json should contain an array of student records');
-assert.ok(examData.length > 500, 'Should contain over 500 student records');
-
-const batches = new Set(examData.map(s => s.batch));
-assert.strictEqual(batches.has('2023-27'), true, 'Should contain batch 2023-27');
-assert.strictEqual(batches.has('2024-28'), true, 'Should contain batch 2024-28');
-assert.strictEqual(batches.has('2025-29'), true, 'Should contain batch 2025-29');
-assert.strictEqual(batches.has('2026-30'), true, 'Should contain batch 2026-30');
-
-let invalidRecords = 0;
-let duplicatePracticals = 0;
-for (const student of examData) {
-  if (!student.rollNo || !student.name) {
-    invalidRecords++;
-  }
-  const seenPrac = new Set();
-  for (const p of (student.practical || [])) {
-    const key = `${p.subject}::${p.date}`;
-    if (seenPrac.has(key)) {
-      duplicatePracticals++;
+if (hasLocalData) {
+  assert.strictEqual(Array.isArray(examData), true, 'exam_data.json should contain an array of student records');
+  let invalidRecords = 0;
+  let duplicatePracticals = 0;
+  for (const student of examData) {
+    if (!student.rollNo || !student.name) invalidRecords++;
+    const seenPrac = new Set();
+    for (const p of (student.practical || [])) {
+      const key = `${p.subject}::${p.date}`;
+      if (seenPrac.has(key)) duplicatePracticals++;
+      seenPrac.add(key);
     }
-    seenPrac.add(key);
   }
+  assert.strictEqual(invalidRecords, 0, 'All student records must have valid rollNo and name');
+  assert.strictEqual(duplicatePracticals, 0, 'Zero duplicate practical exams allowed per student');
+  console.log(`✅ PASS: Local data integrity test passed (${examData.length} records)`);
+} else {
+  console.log('ℹ️  SKIP: No local exam_data.json (student data is kept out of the repo)');
 }
-assert.strictEqual(invalidRecords, 0, 'All student records must have valid rollNo and name');
-assert.strictEqual(duplicatePracticals, 0, 'Zero duplicate practical exams allowed per student');
-console.log(`✅ PASS: Data integrity test passed (${examData.length} valid student records across 4 batches, 0 duplicates)`);
+
+// Test 1b: No student data files may be committed to the public repository
+const { execSync } = require('child_process');
+let tracked = '';
+try {
+  tracked = execSync('git ls-files', { cwd: path.join(__dirname, '..'), encoding: 'utf8' });
+} catch {
+  tracked = '';
+}
+const leaked = tracked.split('\n').filter((f) => /^csv_data\/|^src\/data\/exam_data\.json$|\.env$/.test(f));
+assert.deepStrictEqual(leaked, [], `Student data / secrets must not be committed: ${leaked.join(', ')}`);
+console.log('✅ PASS: No student data or .env files tracked in git');
 
 // Test 2: Secret Scanning Check on server.cjs
 const serverPath = path.join(__dirname, '../server/server.cjs');
@@ -81,7 +85,7 @@ console.log('✅ PASS: Secret scanning test passed (Zero hardcoded secrets found
   }
   assert.strictEqual(d.parseExamDateTime('TBD', '10:00 AM'), null, 'Unparseable dates return null');
 
-  // Every exam in the bundled data must have a parseable date and time
+  // Every exam in the local data (when present) must have a parseable date and time
   let unparsed = 0;
   for (const s of examData) {
     for (const e of [...(s.theory || []), ...(s.practical || [])]) {
@@ -107,17 +111,34 @@ console.log('✅ PASS: Secret scanning test passed (Zero hardcoded secrets found
   ]);
   assert.deepStrictEqual(sorted.map((e) => e.subject), ['A', 'B', 'C', 'Z'], 'Exams sort chronologically, unknown last');
 
-  const timeline = d.buildTimeline(examData[0]);
+  // Synthetic student (never real data)
+  const sampleStudent = {
+    rollNo: '100000000001',
+    name: 'Test Student',
+    theory: [
+      { date: '10/10/2026', subject: 'DBMS, SQL', time: '10:00 AM - 10:30 AM', location: 'CR-37' },
+      { date: '9/10/2026', subject: 'Networks; Security', time: '01:00 PM - 01:30 PM', location: 'TBD' },
+    ],
+    practical: [
+      { date: 'Day 1 : 03rd Oct (Saturday)', subject: 'Java Programming', time: '10:00 AM - 10:15 AM', panel: 'Panel 1', professor: 'Prof. X' },
+    ],
+    reexams: [
+      { date: '17/11/26', subject: 'C++', time: '10:00 AM - 10:30 AM', examType: 'Theory', faculty: 'Prof. Y', classroom: 'CR-5' },
+    ],
+  };
+  const timeline = d.buildTimeline(sampleStudent);
   const flat = timeline.flatMap((g) => g.exams);
-  assert.strictEqual(flat.length, (examData[0].theory || []).length + (examData[0].practical || []).length);
+  assert.strictEqual(flat.length, sampleStudent.theory.length + sampleStudent.practical.length);
   for (let i = 1; i < flat.length; i++) {
     assert.ok(flat[i - 1].parsed.start <= flat[i].parsed.start, 'Timeline is chronological');
   }
 
   // ICS export
-  const ics = generateICS(examData[0]);
+  const ics = generateICS(sampleStudent);
   const events = (ics.match(/BEGIN:VEVENT/g) || []).length;
-  assert.strictEqual(events, flat.length, 'ICS has one event per exam');
+  assert.strictEqual(events, flat.length + sampleStudent.reexams.length, 'ICS has one event per exam incl. re-exams');
+  assert.ok(ics.includes('DBMS\\, SQL') && ics.includes('Networks\\; Security'), 'ICS escapes commas and semicolons');
+  assert.ok(ics.includes('LOCATION:CR-5'), 'Re-exam classroom is used as the location');
   assert.strictEqual((ics.match(/^UID:/gm) || []).length, events, 'Every event has a UID');
   assert.ok(!/DTSTART:.*NaN/.test(ics), 'No invalid dates in ICS');
   assert.ok(ics.split('\r\n').every((l) => l.length <= 75), 'ICS lines are folded to 75 chars');

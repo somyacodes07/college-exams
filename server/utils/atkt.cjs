@@ -115,8 +115,48 @@ function fieldFor(header) {
   if (h.includes('examtype') || h === 'type') return 'examType';
   if (h.includes('date')) return 'date';
   if (h.includes('time') || h.includes('slot')) return 'time';
-  if (h.includes('classroom') || h.includes('room') || h.includes('venue') || h.includes('location')) return 'classroom';
-  if (h.includes('faculty') || h.includes('invigilator') || h.includes('professor') || h.includes('examiner')) return 'faculty';
+  if (/classroom|room|venue|location|hall|lab|block|centre|center/.test(h)) return 'classroom';
+  if (/faculty|invigilator|professor|examiner|teacher|staff|supervisor|mentor|prof|panel|evaluator/.test(h)) return 'faculty';
+  return null;
+}
+
+/** "Prof. X", "Dr X", "Mrs. X", ... */
+const PERSON_RE = /^(prof|professor|dr|mr|mrs|ms|miss|sir|maam|ma'am)\b\.?/i;
+/** "CR-37", "CR 5", "Lab 3", "Room 204", "301", "A-101", "Seminar Hall" */
+const ROOM_RE = /^((cr|lab|room|rm|hall|class(room)?|block|bldg|seminar|auditorium|library|computer\s*lab)\b[\s.\-:#]*[a-z0-9-]*|[a-z]?-?\d{2,4}[a-z]?)$/i;
+
+const looksLikePerson = (v) => PERSON_RE.test(v);
+const looksLikeRoom = (v) => !looksLikePerson(v) && ROOM_RE.test(v);
+
+/** Normalises "prof. sneha  k" -> "Prof. Sneha K". */
+function tidyPerson(v) {
+  return clean(v)
+    .split(' ')
+    .map((w) => (w.length > 1 && w === w.toLowerCase() ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(' ')
+    .replace(/^(prof|dr|mr|mrs|ms)\b\.?\s*/i, (m, t) => `${t[0].toUpperCase()}${t.slice(1).toLowerCase()}. `)
+    .trim();
+}
+
+/** Normalises "cr- 37" -> "CR-37", "lab 3" -> "Lab 3". */
+function tidyRoom(v) {
+  return clean(v)
+    .replace(/^cr\b\s*[-.:]?\s*/i, 'CR-')
+    .replace(/^lab\b/i, 'Lab')
+    .replace(/^room\b/i, 'Room');
+}
+
+/**
+ * Classifies a header-less column by its contents: mostly names like
+ * "Prof. X" -> faculty, mostly room codes -> classroom, anything else ignored.
+ */
+function classifyUnnamedColumn(values) {
+  const filled = values.map(clean).filter(Boolean);
+  if (filled.length === 0) return null;
+  const people = filled.filter(looksLikePerson).length;
+  const rooms = filled.filter(looksLikeRoom).length;
+  if (people / filled.length >= 0.6) return 'faculty';
+  if (rooms / filled.length >= 0.6) return 'classroom';
   return null;
 }
 
@@ -141,7 +181,11 @@ function parseTab(csvText, tabName = '') {
   const headerIndex = rows.findIndex((r) => r.some((c) => /roll/i.test(c)));
   if (headerIndex === -1) return [];
 
-  const fields = rows[headerIndex].map((h) => fieldFor(clean(h)));
+  const dataRows = rows.slice(headerIndex + 1);
+  const fields = rows[headerIndex].map((h, i) => {
+    const label = clean(h);
+    return label ? fieldFor(label) : classifyUnnamedColumn(dataRows.map((r) => r[i]));
+  });
   if (!fields.includes('rollNo')) return [];
   // The tab name is more reliable than the title row (titles are sometimes copied between tabs)
   const fromTitle = parseTitle(rows, headerIndex);
@@ -155,11 +199,34 @@ function parseTab(csvText, tabName = '') {
   let current = {};
   const out = [];
 
-  for (const r of rows.slice(headerIndex + 1)) {
+  for (const r of dataRows) {
     const rec = {};
     fields.forEach((f, i) => {
-      if (f && rec[f] === undefined) rec[f] = clean(r[i]);
+      if (!f) return;
+      const value = clean(r[i]);
+      if (!value) {
+        if (rec[f] === undefined) rec[f] = '';
+        return;
+      }
+      if (f === 'faculty' || f === 'classroom') {
+        // Several faculty/room columns are merged ("Faculty" + "Invigilator")
+        const parts = rec[f] ? rec[f].split(', ') : [];
+        if (!parts.includes(value)) parts.push(value);
+        rec[f] = parts.join(', ');
+      } else if (!rec[f]) {
+        rec[f] = value;
+      }
     });
+
+    // Fix values typed into the wrong column (e.g. "prof. Karan" under "Classroom no.")
+    if (rec.classroom && looksLikePerson(rec.classroom)) {
+      rec.faculty = [rec.faculty, rec.classroom].filter(Boolean).join(', ');
+      rec.classroom = '';
+    }
+    if (rec.faculty && looksLikeRoom(rec.faculty) && !rec.classroom) {
+      rec.classroom = rec.faculty;
+      rec.faculty = '';
+    }
 
     // A new subject block resets the carried-down values
     if (rec.subjectCode || rec.subject) current = {};
@@ -182,25 +249,32 @@ function parseTab(csvText, tabName = '') {
       examType: rec.examType || '',
       date: rec.date || '',
       time: (rec.time || '').replace(/\s+to\s+/i, ' - ').replace(/(\d)\s*:\s*(\d)/g, '$1:$2').toUpperCase().replace(/\s*[-–—]\s*/, ' - '),
-      classroom: rec.classroom || '',
-      faculty: rec.faculty || '',
+      classroom: rec.classroom ? tidyRoom(rec.classroom) : '',
+      faculty: rec.faculty ? [...new Set(rec.faculty.split(', ').map(tidyPerson))].join(', ') : '',
     });
   }
   return out;
 }
 
-async function loadAll() {
+/** Reads and parses every tab. Used by the API and by scripts/atkt_check.cjs. */
+async function readAllTabs() {
   const tabs = await getTabs();
   const results = await Promise.allSettled(
     tabs.map((t) => fetchText(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${t.gid}`))
   );
-
   if (!results.some((r) => r.status === 'fulfilled')) throw new Error('Could not read the ATKT sheet');
+  return results.map((res, i) => ({
+    name: tabs[i].name,
+    ok: res.status === 'fulfilled',
+    exams: res.status === 'fulfilled' ? parseTab(res.value, tabs[i].name) : [],
+  }));
+}
 
+async function loadAll() {
+  const tabs = await readAllTabs();
   const byRoll = new Map();
-  results.forEach((res, i) => {
-    if (res.status !== 'fulfilled') return;
-    for (const exam of parseTab(res.value, tabs[i].name)) {
+  tabs.forEach((tab) => {
+    for (const exam of tab.exams) {
       const { rollNo, ...rest } = exam;
       const list = byRoll.get(rollNo) || [];
       const key = `${rest.group}|${rest.subjectCode}|${rest.subject}|${rest.examType}|${rest.date}|${rest.time}`;
@@ -240,4 +314,4 @@ async function getAtktForRoll(rollNo) {
   return { exams: byRoll.get(String(rollNo)) || [], updatedAt };
 }
 
-module.exports = { isConfigured, getAtktForRoll, parseTab, parseCsv, parseTabName };
+module.exports = { isConfigured, getAtktForRoll, readAllTabs, parseTab, parseCsv, parseTabName };
