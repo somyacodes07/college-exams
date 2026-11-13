@@ -242,6 +242,53 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+// --- ATKT / re-exam lookup (read live from the private sheet, no DB needed) ---
+const atkt = require('./utils/atkt.cjs');
+
+// Stricter limit so roll numbers can't be scanned in bulk
+const atktLookups = new Map();
+const ATKT_WINDOW_MS = 10 * 60 * 1000;
+const ATKT_MAX_LOOKUPS = 40;
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, d] of atktLookups.entries()) if (now > d.resetTime) atktLookups.delete(ip);
+}, ATKT_WINDOW_MS).unref();
+
+const atktRateLimiter = (req, res, next) => {
+  const ip = getClientIp(req);
+  const now = Date.now();
+  const d = atktLookups.get(ip);
+  if (!d || now > d.resetTime) {
+    atktLookups.set(ip, { count: 1, resetTime: now + ATKT_WINDOW_MS });
+    return next();
+  }
+  if (++d.count > ATKT_MAX_LOOKUPS) {
+    return res.status(429).json({ error: 'Too Many Requests', details: 'Please try again in a few minutes.' });
+  }
+  next();
+};
+
+app.get('/api/atkt/:rollNo', atktRateLimiter, async (req, res) => {
+  // Per-student data: never let a browser or CDN cache or share it
+  res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+  res.setHeader('X-Robots-Tag', 'noindex');
+
+  const rollNo = String(req.params.rollNo || '').trim();
+  if (!/^\d{6,20}$/.test(rollNo)) {
+    return res.status(400).json({ error: 'Invalid roll number' });
+  }
+  if (!atkt.isConfigured()) {
+    return res.json({ configured: false, exams: [] });
+  }
+  try {
+    const { exams, updatedAt } = await atkt.getAtktForRoll(rollNo);
+    // Same response shape whether the roll exists or not, so nothing else is revealed
+    res.json({ configured: true, exams, updatedAt });
+  } catch (err) {
+    res.status(503).json({ error: 'ATKT data is temporarily unavailable' });
+  }
+});
+
 app.use(connectDB);
 
 // ============================================================

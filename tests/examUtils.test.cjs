@@ -123,6 +123,35 @@ console.log('✅ PASS: Secret scanning test passed (Zero hardcoded secrets found
   assert.ok(ics.split('\r\n').every((l) => l.length <= 75), 'ICS lines are folded to 75 chars');
   console.log(`✅ PASS: Date parsing, scheduling and ICS export tests passed (${cases.length} formats, ${flat.length} events)`);
 
+  // Test 4: ATKT sheet parsing (synthetic data only, never real students)
+  const { parseTab } = require('../server/utils/atkt.cjs');
+  const sample = [
+    'Re-exam Sem- 3 (2024-28),,,,,,,,,',
+    'Subject Code,Subject,Name,Roll No.,No. of students for Re-exam,Exam Type,Date ,Time,Classroom no.,Faculty',
+    '111,"Data Structures, II",Test Student A,100000000001,2,Theory ,17/11/26,10:00 AM - 10:30 AM,CR-1,Prof. X',
+    ',,Test Student B,100000000002,,,,10:30 AM -11:00 AM,,',
+    '222,Networking,Test Student A,100000000001,1,Practical,18/11/26,1:00 pm to 1:15 pm,,',
+    ',,,,,,,,,',
+    '333,German,Test Student C,100000000003,1,,,11:00 AM - 11: 30 AM,,',
+  ].join('\n');
+  const rows = parseTab(sample);
+  assert.strictEqual(rows.length, 4, 'One entry per student per subject');
+  const b = rows.find((r) => r.rollNo === '100000000002');
+  assert.deepStrictEqual(
+    [b.subject, b.date, b.time, b.examType, b.semester, b.batch, b.faculty],
+    ['Data Structures, II', '17/11/26', '10:30 AM - 11:00 AM', 'Theory', 'Sem 3', '2024-28', 'Prof. X'],
+    'Merged cells are carried down within a subject block'
+  );
+  const net = rows.find((r) => r.subject === 'Networking');
+  assert.strictEqual(net.faculty, '', 'Carried values reset at a new subject block');
+  assert.strictEqual(net.time, '1:00 PM - 1:15 PM', '"to" ranges are normalised');
+  assert.strictEqual(rows.find((r) => r.subject === 'German').time, '11:00 AM - 11:30 AM', 'Stray spaces in times are fixed');
+  assert.ok(rows.every((r) => !('name' in r) && !('noOfStudents' in r)), 'Names and class counts are never exposed');
+  for (const r of rows.filter((x) => x.date)) {
+    assert.ok(d.parseExamDateTime(r.date, r.time), `ATKT date/time parses: ${r.date} ${r.time}`);
+  }
+  console.log(`✅ PASS: ATKT sheet parsing tests passed (${rows.length} entries)`);
+
   console.log('\n🎉 ALL CI/CD TESTS PASSED SUCCESSFULLY!');
 })().catch((err) => {
   console.error('❌ FAIL:', err.message);

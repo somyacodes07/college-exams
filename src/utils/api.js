@@ -249,6 +249,20 @@ export async function checkServerHealth() {
   }
 }
 
+/**
+ * ATKT / re-exam entries for one roll number. Read live on the server from a
+ * private sheet; nothing about ATKT is bundled into the site or cached here.
+ * @returns {Promise<{exams: Array, updatedAt: string|null}>}
+ */
+export async function getAtkt(rollNo, { signal } = {}) {
+  const roll = String(rollNo || '').trim();
+  if (!/^\d{6,20}$/.test(roll)) return { exams: [], updatedAt: null };
+  const res = await fetch(`${API_BASE}/api/atkt/${encodeURIComponent(roll)}`, { cache: 'no-store', signal });
+  if (!res.ok) throw new Error(`ATKT lookup failed (${res.status})`);
+  const data = await res.json();
+  return { exams: Array.isArray(data.exams) ? data.exams : [], updatedAt: data.updatedAt || null };
+}
+
 /** Lists batches present in the data, newest first. */
 export function getBatches() {
   const batches = new Set(searchIndexCache.map((s) => s.batch).filter(Boolean));

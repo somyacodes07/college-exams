@@ -4,6 +4,8 @@ import { Calendar, Clock, BookOpen, Code, AlertCircle, MapPin, User as PersonIco
 import { generateICS, downloadICS } from '../utils/icsGenerator';
 import { isExamCompleted, sortExams } from '../utils/dateUtils';
 import tutVideo from '../assets/tut.mp4';
+import AtktSection from './AtktSection';
+import { useAtkt } from '../hooks/useAtkt';
 
 const itemVariants = {
     hidden: { opacity: 0, y: 12 },
@@ -124,11 +126,12 @@ const ScheduleCard = ({ student }) => {
     // Show exams in chronological order (sheets list them in arbitrary order)
     const theoryExams = useMemo(() => sortExams(student?.theory || []), [student]);
     const practicalExams = useMemo(() => sortExams(student?.practical || []), [student]);
+    const { exams: atktExams } = useAtkt(student?.rollNo);
 
     if (!student) return null;
 
     const handleExport = () => {
-        const icsContent = generateICS(student);
+        const icsContent = generateICS({ ...student, reexams: atktExams });
         downloadICS(`${student.name.replace(/[^a-z0-9]+/gi, '_')}_Schedule.ics`, icsContent);
     };
 
@@ -209,6 +212,9 @@ const ScheduleCard = ({ student }) => {
                     </motion.button>
                 </div>
             </div>
+
+            {/* ATKT re-exams: only rendered for students who have them */}
+            <AtktSection exams={atktExams} />
 
             {/* Mobile-Only Segmented Tabs (Hidden on PC/lg screens) */}
             <div className="flex lg:hidden items-stretch gap-1 p-1 bg-slate-100 dark:bg-[#0c101c]/90 rounded-2xl border border-slate-200/90 dark:border-white/10 w-full max-w-md mx-auto shadow-inner">
