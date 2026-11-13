@@ -16,8 +16,9 @@ export function useAtkt(rollNo) {
     let active = true;
     let controller = null;
 
-    const load = async () => {
-      if (document.visibilityState === 'hidden') return;
+    const load = async (initial = false) => {
+      // Skip background refreshes while the tab is hidden, but always do the first load
+      if (!initial && document.visibilityState === 'hidden') return;
       controller?.abort();
       controller = new AbortController();
       try {
@@ -30,18 +31,19 @@ export function useAtkt(rollNo) {
       }
     };
 
-    load();
-    const timer = setInterval(load, REFRESH_MS);
+    load(true);
+    const timer = setInterval(() => load(), REFRESH_MS);
     const onVisible = () => document.visibilityState === 'visible' && load();
     document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('focus', load);
+    const onFocus = () => load();
+    window.addEventListener('focus', onFocus);
 
     return () => {
       active = false;
       controller?.abort();
       clearInterval(timer);
       document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('focus', load);
+      window.removeEventListener('focus', onFocus);
     };
   }, [rollNo]);
 

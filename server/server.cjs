@@ -299,7 +299,7 @@ app.use(connectDB);
 app.get('/api/students/search-index', async (req, res) => {
   try {
     res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=86400');
-    const students = await Student.find({}, 'name rollNo batch cohort').lean();
+    const students = await Student.find({}, 'name rollNo batch cohort officialRollNo rollPending').lean();
     res.json(students);
   } catch (error) {
     console.error('Error getting search index:', error);
@@ -413,6 +413,11 @@ function writeSyncConfig(config) {
     // Read-only filesystems (e.g. serverless) can't persist config; sync still succeeded
     console.warn('Warning: could not save sync config:', err.message);
   }
+}
+
+/** Roll numbers + names already stored for a batch (used when no roll-number sheet is given). */
+async function knownStudentsFor(batch) {
+  return Student.find({ batch }, 'rollNo name cohort').lean();
 }
 
 /**
@@ -560,7 +565,8 @@ app.post('/api/students/sync-sheets', authenticateToken, async (req, res) => {
     const studentsData = await parseCsvData(mappingCsv, theoryCsv, practicalCsv, {
       batch,
       useAi: !!useAi,
-      groqApiKey: finalApiKey
+      groqApiKey: finalApiKey,
+      knownStudents: mappingCsv ? [] : await knownStudentsFor(batch)
     });
 
     if (!studentsData || studentsData.length === 0) {
@@ -598,7 +604,11 @@ app.post('/api/students/upload-csv', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Theory and Practical CSV contents are required.' });
     }
 
-    const studentsData = await parseCsvData(mappingCsv || '', theoryCsv, practicalCsv, { batch, useAi: false });
+    const studentsData = await parseCsvData(mappingCsv || '', theoryCsv, practicalCsv, {
+      batch,
+      useAi: false,
+      knownStudents: mappingCsv ? [] : await knownStudentsFor(batch)
+    });
     if (!studentsData || studentsData.length === 0) {
       return res.status(400).json({ error: 'Failed to parse any student schedule records from the provided CSV files.' });
     }
@@ -654,7 +664,8 @@ app.post('/api/students/sync-all-sheets', authenticateToken, async (req, res) =>
         const studentsData = await parseCsvData(mappingCsv, theoryCsv, practicalCsv, {
           batch,
           useAi: !!config.useAi,
-          groqApiKey: finalApiKey
+          groqApiKey: finalApiKey,
+          knownStudents: mappingCsv ? [] : await knownStudentsFor(batch)
         });
 
         if (!studentsData || studentsData.length === 0) {

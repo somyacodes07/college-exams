@@ -13,6 +13,10 @@
  * Usage:
  *   node scripts/seed_batch.cjs --batch 2026-30 --dry-run   # report only, writes nothing
  *   node scripts/seed_batch.cjs --batch 2026-30             # apply
+ *   node scripts/seed_batch.cjs --batch 2026-30 --provisional
+ *       # also save students whose roll number is already used by another
+ *       # batch, under a temporary unique ID "<roll>-<batch>" flagged
+ *       # rollPending (fixed later with the official roll-number list)
  *
  * Uses MONGODB_URI from server/.env.
  */
@@ -26,6 +30,7 @@ const args = process.argv.slice(2);
 const batchIdx = args.indexOf('--batch');
 const batch = batchIdx !== -1 ? args[batchIdx + 1] : null;
 const dryRun = args.includes('--dry-run');
+const provisional = args.includes('--provisional');
 
 async function main() {
   if (!batch || !/^20\d{2}-\d{2}$/.test(batch)) {
@@ -68,7 +73,16 @@ async function main() {
       return;
     }
 
-    const ops = [...toInsert, ...toUpdate].map((doc) => ({
+    // Conflicting roll numbers: keep the other batch's record untouched and
+    // store this student under a temporary unique ID until the roll is verified
+    const provisionalDocs = provisional
+      ? conflicts.map((doc) => ({ ...doc, rollNo: `${doc.rollNo}-${batch}`, officialRollNo: doc.rollNo, rollPending: true }))
+      : [];
+    if (provisional) console.log(`  provisional (temporary ID, flagged):    ${provisionalDocs.length}`);
+
+    // --provisional writes only the conflicting students; everything else is untouched
+    const docs = provisional ? provisionalDocs : [...toInsert, ...toUpdate];
+    const ops = docs.map((doc) => ({
       replaceOne: { filter: { rollNo: doc.rollNo }, replacement: doc, upsert: true },
     }));
     if (ops.length) await Student.bulkWrite(ops, { ordered: false });
