@@ -1,128 +1,207 @@
 /* Fonts are loaded from index.html (preconnect + non-blocking stylesheet) */
 @import "tailwindcss";
 
-@theme {
-  --font-sans: 'Outfit', ui-sans-serif, system-ui, sans-serif;
-  --font-heading: 'Sora', 'Outfit', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-}
-
 @variant dark (&:where(.dark, .dark *));
 
+/*
+ * Design: a printed date sheet. Blue-black ballpoint ink on white paper,
+ * resting on a cool grey desk. One functional colour, highlighter yellow,
+ * marks only the student's next exam; stamp red marks re-exams.
+ */
 :root {
-  font-family: 'Outfit', sans-serif;
-  color-scheme: light dark;
-  -webkit-tap-highlight-color: transparent;
+  --desk: #e9ecf0;
+  --paper: #ffffff;
+  --ink: #1c2a47;
+  --ink-soft: #55607a;
+  --ink-faint: #5f687c;
+  --rule: #d3d9e2;
+  --mark: #f7e463;
+  --mark-ink: #1c2a47;
+  --mark-tint: #fdf7cf;
+  --stamp: #b42318;
+  /* Highlighter set: each exam type has a pen colour (bar/text) and a tint */
+  --theory: #2273b5;
+  --theory-tint: #dcecfb;
+  --practical: #24834a;
+  --practical-tint: #dcf3e3;
+  --reexam: #c0306f;
+  --reexam-tint: #fbe2ee;
+  color-scheme: light;
+}
+
+.dark {
+  --desk: #161d2e;
+  --paper: #1f283c;
+  --ink: #eef1f6;
+  --ink-soft: #aab3c4;
+  --ink-faint: #8e99ae;
+  --rule: #33405a;
+  --mark: #e8d44a;
+  --mark-ink: #1c2a47;
+  --mark-tint: #3a3826;
+  --stamp: #f2796a;
+  --theory: #7bbcf2;
+  --theory-tint: #1e3550;
+  --practical: #74d197;
+  --practical-tint: #1b3a2a;
+  --reexam: #f291c0;
+  --reexam-tint: #42223a;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: 'Atkinson Hyperlegible Next', 'Atkinson Hyperlegible', ui-sans-serif, system-ui, sans-serif;
+  --color-desk: var(--desk);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-rule: var(--rule);
+  --color-mark: var(--mark);
+  --color-mark-ink: var(--mark-ink);
+  --color-mark-tint: var(--mark-tint);
+  --color-stamp: var(--stamp);
+  --color-theory: var(--theory);
+  --color-theory-tint: var(--theory-tint);
+  --color-practical: var(--practical);
+  --color-practical-tint: var(--practical-tint);
+  --color-reexam: var(--reexam);
+  --color-reexam-tint: var(--reexam-tint);
 }
 
 html {
-  scroll-behavior: smooth;
   overflow-x: clip;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
   margin: 0;
-  background-color: #f8fafc;
-  color: #0f172a;
-  overflow-x: clip;
   min-height: 100vh;
   min-height: 100dvh;
-  transition: background-color 300ms cubic-bezier(0.4, 0, 0.2, 1), color 300ms ease;
+  overflow-x: clip;
+  background: var(--desk);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-.dark body {
-  background-color: #0b0f19;
-  color: #f1f5f9;
+/* Desktop has room: everything reads one step larger */
+@media (min-width: 1024px) {
+  body { font-size: 18px; }
 }
 
-/* Background Cyber Grid */
-.cyber-grid {
-  background-size: 32px 32px;
-  background-image: 
-    linear-gradient(to right, rgba(15, 23, 42, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+/* Times, dates and roll numbers line up in columns */
+.tnum {
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
-.dark .cyber-grid {
-  background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+/* Keyboard focus is always visible. In the base layer so a component can
+   replace it with its own focus style (e.g. the search box border). */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
+/* Highlighter stroke behind the next exam: the page's one moment of motion */
+.highlight {
+  background-image: linear-gradient(transparent 12%, var(--mark) 12%, var(--mark) 88%, transparent 88%);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  color: var(--mark-ink);
+  /* Stroke bleeds left only, so it never covers the punctuation after it */
+  padding: 0 0.12em;
+  margin: 0 0 0 -0.12em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  animation: highlight-swipe 700ms cubic-bezier(0.3, 0.7, 0.2, 1) 250ms both;
 }
 
-::-webkit-scrollbar-track {
-  background: #f1f5f9;
+@keyframes highlight-swipe {
+  from { background-size: 0% 100%; }
+  to { background-size: 100% 100%; }
 }
 
-.dark ::-webkit-scrollbar-track {
-  background: #090d16;
+/* Skeleton: the shape of the timetable while it loads */
+.skeleton {
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--desk) 0%, var(--rule) 45%, var(--desk) 90%);
+  background-size: 220% 100%;
+  animation: skeleton-sweep 1.3s ease-in-out infinite;
+}
+@keyframes skeleton-sweep {
+  from { background-position: 100% 0; }
+  to { background-position: -120% 0; }
 }
 
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 9999px;
+/* The schedule arrives as one short, staggered reveal (header, then sheets) */
+.reveal {
+  animation: reveal-in 320ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes reveal-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
 }
 
-.dark ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+/* Quick crossfade when switching tabs */
+.swap {
+  animation: swap-in 180ms ease-out both;
+}
+@keyframes swap-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #10b981;
+/* Confirmation pop on copy */
+.pop {
+  animation: pop 260ms cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+@keyframes pop {
+  0% { transform: scale(0.94); }
+  100% { transform: scale(1); }
 }
 
-/* Respect users who prefer less motion */
+/* Toast at the bottom of the screen */
+.toast {
+  animation: toast-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
 }
 
-/* Avoid iOS zoom-on-focus and keep tap targets crisp */
 input, select, textarea, button {
-  font-size: inherit;
+  font: inherit;
   touch-action: manipulation;
 }
 
-/* Custom Scrollbar for elements */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 9999px;
-}
-.dark .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
+/* Thin scrollbar for the admin panel */
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 9999px; }
 
-/* Glow Utilities */
-.glow-emerald {
-  box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.25);
-}
-
-.glow-cyan {
-  box-shadow: 0 0 25px -5px rgba(6, 182, 212, 0.25);
-}
-
-.glow-purple {
-  box-shadow: 0 0 25px -5px rgba(139, 92, 246, 0.25);
+/* Print / save as PDF: just the student's date sheet, black on white */
+@media print {
+  :root, .dark {
+    --desk: #ffffff; --paper: #ffffff; --ink: #000000; --ink-soft: #333333;
+    --ink-faint: #666666; --rule: #bbbbbb; --mark: #fff176;
+  }
+  body { background: #fff; font-size: 12pt; }
+  .highlight { animation: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  section, li { break-inside: avoid; }
+  @page { margin: 14mm; }
 }

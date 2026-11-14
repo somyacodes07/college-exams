@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { RotateCcw, Calendar, Check, User as PersonIcon, MapPin } from 'lucide-react';
-import { parseExamDateTime, isExamCompleted, formatDayLabel, relativeDayLabel, cleanDateLabel } from '../utils/dateUtils';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Check } from 'lucide-react';
+import { parseExamDateTime, isExamCompleted, relativeDayLabel, examDateParts, displayTime } from '../utils/dateUtils';
+import { KIND, ROW_GRID } from './kind';
+import PrintButton from './PrintButton';
 
 const KIND_ORDER = ['Theory', 'Project Eval', 'Practical', 'Viva'];
 const semNumber = (s) => parseInt(String(s || '').replace(/\D/g, ''), 10) || 99;
@@ -52,137 +53,119 @@ function defaultTab(groups, now) {
   return groups[0] ? { semester: groups[0].semester, kind: groups[0].kinds[0].kind } : null;
 }
 
-/** Groups a tab's items by day for a compact, scannable list. */
-function byDay(items) {
-  const days = [];
-  for (const item of items) {
-    const key = item.parsed ? item.parsed.dayKey : `raw:${cleanDateLabel(item.exam.date)}`;
-    let day = days[days.length - 1];
-    if (!day || day.key !== key) {
-      day = { key, dayKey: item.parsed?.dayKey || null, rawDate: cleanDateLabel(item.exam.date), items: [] };
-      days.push(day);
-    }
-    day.items.push(item);
-  }
-  return days;
-}
-
-const splitTime = (time) => {
-  const [start, end] = String(time || '').split(/\s*[-–—]\s*/);
-  return { start: start || '—', end: end || '' };
-};
-
-const Row = ({ exam, kind }) => {
-  const completed = isExamCompleted(exam);
-  const { start, end } = splitTime(exam.time);
+const Row = ({ exam, kind, isNext, showDate, now }) => {
+  const completed = isExamCompleted(exam, now);
+  const { weekday, day, parsed } = examDateParts(exam);
+  const isToday = parsed ? relativeDayLabel(parsed.dayKey, now) === 'Today' : false;
   // Only show the exam type when it adds something beyond the tab name
   const showType = exam.examType && !exam.examType.toLowerCase().startsWith(kind.toLowerCase().split(' ')[0]);
 
   return (
-    <li className={`flex gap-3 py-3 ${completed ? 'opacity-55' : ''}`}>
-      <div className="w-[74px] flex-shrink-0 whitespace-nowrap">
-        <div className={`font-mono text-[13px] font-bold leading-tight ${completed ? 'line-through text-slate-500' : 'text-slate-900 dark:text-white'}`}>
-          {start}
-        </div>
-        {end && <div className="font-mono text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">to {end}</div>}
+    <li className={`${ROW_GRID} ${showDate ? 'pt-3 lg:pt-4 border-t border-rule first:border-t-0' : 'pt-1'} pb-1`}>
+      <div className="tnum leading-tight pt-0.5">
+        {showDate && (
+          <>
+            <div className={`text-[13px] lg:text-[15px] ${isToday ? 'font-bold text-ink' : 'text-ink-faint'}`}>{parsed ? (isToday ? 'Today' : weekday) : ''}</div>
+            <div className={`text-[16px] lg:text-[19px] font-bold ${completed ? 'text-ink-faint' : 'text-ink'}`}>{day}</div>
+          </>
+        )}
       </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-2">
-          <p className="text-[15px] font-semibold text-slate-900 dark:text-white leading-snug break-words">{exam.subject}</p>
+      <div className={`min-w-0 border-l-[3px] pl-3 lg:pl-4 py-0.5 pb-2 ${KIND.reexam.bar} ${completed ? 'opacity-55' : ''}`}>
+        <div className="flex items-start justify-between gap-3">
+          <p className={`text-[16px] lg:text-[19px] font-bold leading-snug break-words ${completed ? 'text-ink-faint' : 'text-ink'}`}>
+            {isNext ? <span className="highlight">{exam.subject}</span> : exam.subject}
+          </p>
           {completed && (
-            <span className="flex-shrink-0 inline-flex items-center gap-1 text-[10px] font-bold uppercase text-emerald-700 dark:text-emerald-400">
-              <Check size={11} className="stroke-[3]" /> Done
+            <span className="flex-shrink-0 inline-flex items-center gap-1 text-[13px] lg:text-[15px] text-ink-faint">
+              <Check size={14} strokeWidth={2.5} /> Done
             </span>
           )}
         </div>
-        {showType && <p className="mt-0.5 text-xs font-medium text-rose-700 dark:text-rose-300">{exam.examType}</p>}
-        {/* Faculty and room are always shown so students know what's still pending */}
-        <dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-xs">
-          <dt className="inline-flex items-center gap-1 text-slate-500 dark:text-slate-400"><PersonIcon size={11} />Faculty</dt>
-          <dd className={exam.faculty ? 'font-medium text-slate-800 dark:text-slate-200' : 'italic text-slate-400 dark:text-slate-500'}>
-            {exam.faculty || 'To be announced'}
-          </dd>
-          <dt className="inline-flex items-center gap-1 text-slate-500 dark:text-slate-400"><MapPin size={11} />Room</dt>
-          <dd className={exam.classroom ? 'font-semibold text-slate-800 dark:text-slate-200' : 'italic text-slate-400 dark:text-slate-500'}>
-            {exam.classroom || 'To be announced'}
-          </dd>
+        <p className={`tnum mt-0.5 text-[15px] lg:text-[17px] whitespace-nowrap ${completed ? 'text-ink-faint' : 'text-ink-soft'}`}>
+          {exam.time ? displayTime(exam.time) : 'Time to be announced'}
+        </p>
+        {showType && <p className="text-[14px] lg:text-[16px] text-ink-soft">{exam.examType}</p>}
+        {/* Faculty and room are always shown, so students can see what's still pending */}
+        <dl className={`mt-1 grid grid-cols-[auto_1fr] gap-x-3 text-[14px] lg:text-[16px] ${completed ? 'text-ink-faint' : ''}`}>
+          <dt className="text-ink-faint">Faculty</dt>
+          <dd className={exam.faculty ? (completed ? '' : 'text-ink') : 'text-ink-faint italic'}>{exam.faculty || 'To be announced'}</dd>
+          <dt className="text-ink-faint">Room</dt>
+          <dd className={exam.classroom ? (completed ? 'font-semibold' : 'text-ink font-semibold') : 'text-ink-faint italic'}>{exam.classroom || 'To be announced'}</dd>
         </dl>
       </div>
     </li>
   );
 };
 
-const pill = (active) =>
-  `flex-shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap px-3 rounded-xl text-sm font-semibold min-h-[40px] transition ${active
-    ? 'bg-rose-600 text-white shadow-sm'
-    : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/10'}`;
+const tabClass = (active) =>
+  `-mb-px h-11 lg:h-12 px-3 sm:px-4 text-[15px] lg:text-[16px] font-bold whitespace-nowrap border-b-[3px] transition-colors ${active ? `${KIND.reexam.rule} text-ink` : 'border-transparent text-ink-faint hover:text-ink-soft'}`;
 
-/** ATKT re-exams, split into the sheet's tabs (semester × Theory / Project Eval). */
-const AtktSection = ({ exams }) => {
-  const [now] = useState(() => Date.now());
+/** ATKT re-exams, split into the sheet's tabs (semester, then Theory / Project Eval). */
+const AtktSection = ({ exams, nextExam, now: nowProp }) => {
+  const [mountedAt] = useState(() => Date.now());
+  const now = nowProp ?? mountedAt;
   const groups = useMemo(() => buildGroups(exams || []), [exams]);
   const initial = useMemo(() => defaultTab(groups, now), [groups, now]);
   const [picked, setPicked] = useState(null);
+  const activeSemRef = useRef(null);
+  const activeSem = picked?.semester ?? initial?.semester;
+
+  // Keep the selected semester tab visible in the scrolling tab row
+  useEffect(() => {
+    activeSemRef.current?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+  }, [activeSem]);
 
   if (groups.length === 0 || !initial) return null;
 
   // Keep the user's pick only while it still exists in the data
   const semGroup = groups.find((g) => g.semester === (picked?.semester ?? initial.semester)) || groups[0];
   const kindGroup = semGroup.kinds.find((k) => k.kind === (picked?.kind ?? initial.kind)) || semGroup.kinds[0];
-
-  const total = exams.length;
-  const upcoming = exams.filter((e) => !isExamCompleted(e)).length;
-  const days = byDay(kindGroup.items);
-  const tabKey = `${semGroup.semester}|${kindGroup.kind}`;
+  const upcoming = exams.filter((e) => !isExamCompleted(e, now)).length;
 
   return (
-    <motion.section
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25 }}
-      aria-label="ATKT re-exam schedule"
-      className="bg-white dark:bg-[#0c101c]/60 rounded-3xl p-4 sm:p-6 border border-rose-200/90 dark:border-rose-500/20 shadow-sm dark:shadow-none"
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-          <div className="p-2 sm:p-2.5 bg-rose-100 dark:bg-rose-500/10 rounded-2xl border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 flex-shrink-0">
-            <RotateCcw size={20} />
-          </div>
-          <div className="min-w-0">
-            <h3 className="text-lg sm:text-xl font-bold font-heading text-slate-900 dark:text-white">ATKT Re-exams</h3>
-            <p className="text-[11px] sm:text-xs text-slate-500 font-mono">
-              {upcoming > 0 ? `${upcoming} of ${total} upcoming` : 'All re-exams completed'}
-            </p>
-          </div>
+    <section aria-label="ATKT re-exam schedule" className="reveal bg-paper border border-rule rounded-xl px-4 sm:px-5 lg:px-6 pt-4 lg:pt-5 pb-2 print:border-0 print:px-0" style={{ animationDelay: '60ms' }}>
+      <div className={`flex items-center justify-between gap-3 pb-3 border-b-[3px] ${KIND.reexam.rule}`}>
+        <div className="flex items-center gap-2.5">
+          <h3 className="text-[20px] lg:text-[24px] font-extrabold tracking-[-0.01em]">Re-exams</h3>
+          <span className="text-[12px] font-bold text-stamp border-[1.5px] border-stamp rounded-[3px] px-1.5 leading-[18px]">ATKT</span>
         </div>
+        <span className="text-[14px] lg:text-[15px] text-ink-faint tnum">
+          {upcoming > 0 ? `${upcoming} of ${exams.length} to go` : 'All done'}
+        </span>
       </div>
 
-      {/* Semester tabs */}
-      {groups.length > 1 && (
-        <div className="mt-4 -mx-4 px-4 sm:mx-0 sm:px-0 flex gap-2 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Semester">
+      {/* Semester tabs, with Print at the end of the row */}
+      <div className="flex items-end gap-2 border-b border-rule">
+      {groups.length > 1 ? (
+        <div
+          className={`flex min-w-0 flex-1 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${groups.length > 3 ? 'max-sm:[mask-image:linear-gradient(to_right,black_82%,transparent)]' : ''}`}
+          role="tablist"
+          aria-label="Semester"
+        >
           {groups.map((g) => {
             const count = g.kinds.reduce((n, k) => n + k.items.length, 0);
-            const active = g.semester === semGroup.semester;
             return (
               <button
                 key={g.semester}
+                ref={g.semester === semGroup.semester ? activeSemRef : undefined}
                 role="tab"
-                aria-selected={active}
+                aria-selected={g.semester === semGroup.semester}
                 onClick={() => setPicked({ semester: g.semester, kind: kindGroup.kind })}
-                className={pill(active)}
+                className={tabClass(g.semester === semGroup.semester)}
               >
-                {g.semester}
-                <span className={`text-[11px] font-mono px-1.5 rounded-md ${active ? 'bg-white/20' : 'bg-slate-100 dark:bg-white/10'}`}>{count}</span>
+                {g.semester}<span className={`ml-1.5 inline-block min-w-[1.5rem] px-1.5 rounded-full text-[12px] lg:text-[13px] leading-[20px] font-bold tnum text-center ${g.semester === semGroup.semester ? 'bg-reexam-tint text-ink' : 'bg-desk text-ink-faint'}`}>{count}</span>
               </button>
             );
           })}
         </div>
+      ) : (
+        <p className="flex-1 h-11 lg:h-12 flex items-center text-[15px] lg:text-[16px] font-bold">{semGroup.semester}</p>
       )}
+        <div className="flex-shrink-0 mb-1"><PrintButton /></div>
+      </div>
 
-      {/* Type toggle (Theory / Project Eval) */}
       {semGroup.kinds.length > 1 ? (
-        <div className="mt-3 flex p-1 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10" role="tablist" aria-label="Exam type">
+        <div className="mt-3 inline-flex rounded-md border border-rule p-0.5" role="tablist" aria-label="Exam type">
           {semGroup.kinds.map((k) => {
             const active = k.kind === kindGroup.kind;
             return (
@@ -191,52 +174,27 @@ const AtktSection = ({ exams }) => {
                 role="tab"
                 aria-selected={active}
                 onClick={() => setPicked({ semester: semGroup.semester, kind: k.kind })}
-                className={`flex-1 inline-flex items-center justify-center gap-1.5 whitespace-nowrap px-2 py-2 rounded-lg text-sm font-semibold min-h-[38px] transition ${active
-                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
-                  : 'text-slate-500 dark:text-slate-400'}`}
+                className={`h-9 lg:h-10 px-3 lg:px-4 rounded-[5px] text-[14px] lg:text-[16px] font-bold whitespace-nowrap transition-colors ${active ? 'bg-ink text-paper' : 'text-ink-soft hover:text-ink'}`}
               >
-                {k.kind}
-                <span className="text-[11px] font-mono opacity-70">{k.items.length}</span>
+                {k.kind}<span className={`ml-1.5 inline-block min-w-[1.5rem] px-1.5 rounded-full text-[12px] leading-[20px] font-bold tnum text-center ${active ? 'bg-paper/20 text-paper' : 'bg-desk text-ink-faint'}`}>{k.items.length}</span>
               </button>
             );
           })}
         </div>
       ) : (
-        <p className="mt-3 text-sm font-semibold text-slate-700 dark:text-slate-200">{kindGroup.kind}</p>
+        <p className="mt-3 text-[15px] lg:text-[17px] font-bold text-ink-soft">{kindGroup.kind}</p>
       )}
 
-      {/* Day-grouped list for the selected tab */}
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.div
-          key={tabKey}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.15 }}
-          className="mt-3 space-y-3"
-        >
-          {days.map((day) => {
-            const rel = relativeDayLabel(day.dayKey, now);
-            return (
-              <div key={day.key} className="rounded-2xl border border-slate-200/80 dark:border-white/10 bg-slate-50/60 dark:bg-white/[0.02] px-3.5">
-                <div className="flex items-center gap-2 pt-3 pb-1">
-                  <Calendar size={13} className={rel === 'Today' ? 'text-amber-500' : 'text-rose-500'} />
-                  <span className="text-sm font-bold text-slate-900 dark:text-white">
-                    {day.dayKey ? formatDayLabel(day.dayKey) : (day.rawDate || 'Date to be announced')}
-                  </span>
-                  {rel && <span className={`text-[11px] font-semibold ${rel === 'Today' ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500'}`}>{rel}</span>}
-                </div>
-                <ul className="divide-y divide-slate-200/70 dark:divide-white/5">
-                  {day.items.map((item) => (
-                    <Row key={item.index} exam={item.exam} kind={kindGroup.kind} />
-                  ))}
-                </ul>
-              </div>
-            );
-          })}
-        </motion.div>
-      </AnimatePresence>
-    </motion.section>
+      <ol key={`${semGroup.semester}-${kindGroup.kind}`} className="swap mt-1">
+        {kindGroup.items.map((item, i) => {
+          // A date is printed once per day, like a real timetable
+          const prev = kindGroup.items[i - 1];
+          const key = (it) => it.parsed?.dayKey || `raw-${it.exam.date}`;
+          const showDate = !prev || key(prev) !== key(item);
+          return <Row key={item.index} exam={item.exam} kind={kindGroup.kind} isNext={item.exam === nextExam} showDate={showDate} now={now} />;
+        })}
+      </ol>
+    </section>
   );
 };
 

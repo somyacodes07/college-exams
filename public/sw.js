@@ -1,4 +1,4 @@
-const CACHE_NAME = 'exam-scheduler-v5';
+const CACHE_NAME = 'exam-scheduler-v7';
 const urlsToCache = [
     '/',
     '/index.html',
@@ -56,20 +56,23 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Cache-First for static hashed assets with network fallback
-    event.respondWith(
-        caches.match(event.request).then((cachedResponse) => {
-            if (cachedResponse) {
-                return cachedResponse;
-            }
-            return fetch(event.request).then((networkResponse) => {
-                if (networkResponse && networkResponse.status === 200 && event.request.method === 'GET') {
-                    const responseClone = networkResponse.clone();
-                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+    // Only fingerprinted build files (/assets/name-HASH.ext) never change, so
+    // only they are served cache-first. Anything else goes to the network
+    // first, so a stale copy can never stick (this also keeps dev servers fresh).
+    if (event.request.method !== 'GET') return;
+    if (url.origin === self.location.origin && url.pathname.startsWith('/assets/')) {
+        event.respondWith(
+            caches.match(event.request).then((cached) => cached || fetch(event.request).then((res) => {
+                if (res && res.status === 200) {
+                    const copy = res.clone();
+                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
                 }
-                return networkResponse;
-            });
-        })
-    );
+                return res;
+            }))
+        );
+        return;
+    }
+
+    event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
 });
 

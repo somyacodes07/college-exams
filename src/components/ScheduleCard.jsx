@@ -1,421 +1,384 @@
-import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Clock, BookOpen, Code, AlertCircle, MapPin, User as PersonIcon, Copy, Check, Play, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { CalendarPlus, Copy, Check, ChevronDown, Share2 } from 'lucide-react';
 import { generateICS, downloadICS } from '../utils/icsGenerator';
-import { isExamCompleted, sortExams } from '../utils/dateUtils';
+import {
+    isExamCompleted, sortExams, relativeDayLabel, displayTime, formatCountdown,
+    examDateParts as dateParts, findNextExam as findNext,
+} from '../utils/dateUtils';
+import { copyText, toast } from '../utils/copy';
 import tutVideo from '../assets/tut.mp4';
 import AtktSection from './AtktSection';
+import { SheetSkeleton } from './ScheduleSkeleton';
 import { useAtkt } from '../hooks/useAtkt';
+import { KIND, ROW_GRID } from './kind';
+import PrintButton from './PrintButton';
 
-const itemVariants = {
-    hidden: { opacity: 0, y: 12 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.15, ease: "easeOut" } }
-};
+const STANDARD_FIELDS = ['date', 'subject', 'time', 'location', 'type', 'panel', 'professor', '_id', '__v', 'id'];
+
+const hasValue = (v) => v && v !== 'TBD' && v !== 'Unknown' && String(v).trim() !== '';
 
 const formatKeyName = (key) => {
-    const result = key.replace(/([A-Z])/g, " $1");
+    const result = key.replace(/([A-Z])/g, ' $1').toLowerCase();
     return result.charAt(0).toUpperCase() + result.slice(1);
 };
 
-const ExamItem = ({ exam, type }) => {
-    const isTheory = type === 'theory';
-    const completed = isExamCompleted(exam);
-    const accentColor = completed
-        ? 'text-emerald-600 dark:text-emerald-400'
-        : isTheory 
-            ? 'text-purple-600 dark:text-purple-400' 
-            : 'text-emerald-600 dark:text-emerald-400';
-            
-    const borderHover = completed
-        ? 'border-emerald-500/20 dark:border-emerald-500/20 bg-slate-50/70 dark:bg-slate-900/40 hover:border-emerald-500/40'
-        : isTheory 
-            ? 'hover:border-purple-500/40 hover:shadow-md dark:hover:shadow-[0_0_25px_-5px_rgba(168,85,247,0.25)]' 
-            : 'hover:border-emerald-500/40 hover:shadow-md dark:hover:shadow-[0_0_25px_-5px_rgba(16,185,129,0.25)]';
-            
-    const badgeBg = completed
-        ? 'bg-emerald-500/5 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20'
-        : isTheory
-            ? 'bg-purple-100 dark:bg-purple-500/10 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-500/20'
-            : 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/20';
+/** Re-renders every minute so "Done" states and the countdown stay current. */
+const useNow = () => {
+    const [now, setNow] = useState(() => Date.now());
+    useEffect(() => {
+        const id = setInterval(() => setNow(Date.now()), 60 * 1000);
+        return () => clearInterval(id);
+    }, []);
+    return now;
+};
 
-    const standardFields = ['date', 'subject', 'time', 'location', 'type', 'panel', 'professor', '_id', '__v'];
-    const extraFields = Object.keys(exam).filter(key => {
-        if (standardFields.includes(key)) return false;
-        if (!exam[key]) return false;
-        if (key.toLowerCase().includes('noofstudent')) {
-            const hasLocation = exam.location && exam.location !== 'TBD' && exam.location.trim() !== '';
-            if (!hasLocation) return false;
-        }
-        return true;
+/** Short-lived confirmation state for a button. */
+const useFlash = () => {
+    const [flash, setFlash] = useState(null);
+    useEffect(() => {
+        if (!flash) return undefined;
+        const t = setTimeout(() => setFlash(null), 2200);
+        return () => clearTimeout(t);
+    }, [flash]);
+    return [flash, setFlash];
+};
+
+const TimetableRow = ({ exam, kind, isNext, showDate, now }) => {
+    const completed = isExamCompleted(exam, now);
+    const { weekday, day, parsed } = dateParts(exam);
+    const isToday = parsed ? relativeDayLabel(parsed.dayKey, now) === 'Today' : false;
+
+    const extras = Object.keys(exam).filter((key) => {
+        if (STANDARD_FIELDS.includes(key) || key.startsWith('_')) return false;
+        if (!exam[key] || typeof exam[key] === 'object') return false;
+        return !key.toLowerCase().includes('noofstudent');
     });
+    const showLocation = hasValue(exam.location)
+        && exam.location.trim().toLowerCase() !== (exam.panel || '').trim().toLowerCase();
+    const panel = hasValue(exam.panel)
+        ? (exam.professor ? exam.panel.split(' ').slice(0, 2).join(' ') : exam.panel)
+        : null;
 
     return (
-        <motion.div
-            variants={itemVariants}
-            initial="hidden"
-            animate="show"
-            className={`group relative overflow-hidden bg-white dark:bg-[#0f1422]/90 text-left rounded-2xl p-4 sm:p-5 border border-slate-200/90 dark:border-white/10 ${borderHover} transition-colors duration-200 shadow-sm dark:shadow-none`}
-        >
-            {/* Content Container - Subtle opacity when completed, unblurs on hover */}
-            <div className={`flex flex-col gap-3.5 relative z-10 transition-colors duration-300 ${completed ? 'opacity-85 hover:opacity-100' : ''}`}>
-                {/* Subject Header & Badges */}
-                <div className="flex flex-col gap-2.5">
-                    <div className="flex items-start justify-between gap-3">
-                        <h4 className={`text-base sm:text-lg md:text-xl font-bold font-heading ${completed ? 'text-slate-700 dark:text-slate-300' : 'text-slate-900 dark:text-white'} leading-snug ${isTheory ? 'group-hover:text-purple-600 dark:group-hover:text-purple-400' : 'group-hover:text-emerald-600 dark:group-hover:text-emerald-400'} transition-colors flex-1 min-w-0 break-words`}>
-                            {exam.subject}
-                        </h4>
-
-                        {/* Completed Badge (Responsive inline flex) */}
-                        {completed && (
-                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-mono font-bold bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 dark:border-emerald-500/40 shadow-xs uppercase tracking-wider flex-shrink-0">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
-                                <Check size={12} className="stroke-[3] text-emerald-600 dark:text-emerald-400" />
-                                <span>COMPLETED</span>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                        {exam.location && exam.location !== 'TBD' && exam.location.trim().toLowerCase() !== (exam.panel || '').trim().toLowerCase() && (
-                            <div className={`flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold ${badgeBg}`}>
-                                <MapPin size={12} />
-                                <span>{exam.location}</span>
-                            </div>
-                        )}
-                        {exam.professor && (
-                            <div className={`flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold ${badgeBg}`}>
-                                <PersonIcon size={12} />
-                                <span>{exam.professor}</span>
-                            </div>
-                        )}
-                        {exam.panel && exam.panel !== 'Unknown' && (
-                            <div className={`flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold ${badgeBg} opacity-90`}>
-                                <span>
-                                    {exam.professor ? exam.panel.split(' ').slice(0, 2).join(' ') : exam.panel}
-                                </span>
-                            </div>
-                        )}
-                        {extraFields.map(key => (
-                            <div key={key} className={`flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold ${badgeBg} opacity-80`}>
-                                <span className="opacity-70 font-normal">{formatKeyName(key)}: </span>
-                                <span>{exam[key]}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Date & Time Badges */}
-                <div className="flex flex-wrap gap-2 text-xs font-mono">
-                    <div className={`flex items-center gap-1.5 ${completed ? 'bg-emerald-500/5 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/20' : 'bg-slate-100 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/5'} px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl border`}>
-                        <Calendar size={13} className={accentColor} />
-                        <span>{exam.date ? exam.date.replace(/^Day \d+:\s*/, '') : 'NA'}</span>
-                    </div>
-                    <div className={`flex items-center gap-1.5 ${completed ? 'bg-emerald-500/5 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/20' : 'bg-slate-100 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/5'} px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl border`}>
-                        <Clock size={13} className={accentColor} />
-                        <span>{exam.time || 'NA'}</span>
-                    </div>
-                </div>
+        <li className={`${ROW_GRID} ${showDate ? 'pt-3 lg:pt-4 border-t border-rule first:border-t-0' : 'pt-1'} pb-1`}>
+            <div className="tnum leading-tight pt-0.5">
+                {showDate && (
+                    <>
+                        <div className={`text-[13px] lg:text-[15px] ${isToday ? 'font-bold text-ink' : 'text-ink-faint'}`}>{isToday ? 'Today' : weekday}</div>
+                        <div className={`text-[16px] lg:text-[19px] font-bold ${completed ? 'text-ink-faint' : 'text-ink'}`}>{day}</div>
+                    </>
+                )}
             </div>
-        </motion.div>
+            <div className={`min-w-0 border-l-[3px] pl-3 lg:pl-4 py-0.5 pb-2 ${KIND[kind].bar} ${completed ? 'opacity-55' : ''}`}>
+                <div className="flex items-start justify-between gap-3">
+                    <p className={`text-[16px] lg:text-[19px] font-bold leading-snug break-words ${completed ? 'text-ink-soft' : 'text-ink'}`}>
+                        {isNext ? <span className="highlight">{exam.subject}</span> : exam.subject}
+                    </p>
+                    {completed && (
+                        <span className="flex-shrink-0 inline-flex items-center gap-1 text-[13px] lg:text-[15px] text-ink-soft">
+                            <Check size={14} strokeWidth={2.5} /> Done
+                        </span>
+                    )}
+                </div>
+                <p className="tnum mt-0.5 text-[15px] lg:text-[17px] text-ink-soft">
+                    <span className="whitespace-nowrap">{exam.time ? displayTime(exam.time) : 'Time to be announced'}</span>
+                    {showLocation && <span className="ml-3 font-semibold text-ink">{exam.location}</span>}
+                </p>
+                {(panel || hasValue(exam.professor) || extras.length > 0) && (
+                    <p className="mt-0.5 text-[14px] lg:text-[15px] text-ink-faint flex flex-wrap gap-x-3">
+                        {panel && <span>{panel}</span>}
+                        {hasValue(exam.professor) && <span>{exam.professor}</span>}
+                        {extras.map((key) => <span key={key} className="tnum">{formatKeyName(key)} {exam[key]}</span>)}
+                    </p>
+                )}
+            </div>
+        </li>
     );
 };
 
-const ScheduleCard = ({ student }) => {
-    const [isCopied, setIsCopied] = useState(false);
-    const [activeMobileTab, setActiveMobileTab] = useState('all');
-    const [showVideo, setShowVideo] = useState(false);
+const dayKeyOf = (exam) => dateParts(exam).parsed?.dayKey || `raw-${exam.date}`;
 
-    // Show exams in chronological order (sheets list them in arbitrary order)
+const Sheet = ({ title, kind, note, exams, nextExam, emptyText, now, className = '', style }) => (
+    <section style={style} className={`reveal bg-paper border border-rule rounded-xl px-4 sm:px-5 lg:px-6 pt-4 lg:pt-5 pb-2 print:border-0 print:px-0 ${className}`}>
+        <div className={`flex items-baseline justify-between gap-3 pb-3 border-b-[3px] ${KIND[kind].rule}`}>
+            <h3 className="text-[20px] lg:text-[24px] font-extrabold tracking-[-0.01em]">{title}</h3>
+            <span className="text-[14px] lg:text-[15px] text-ink-faint tnum">{note}</span>
+        </div>
+        {exams.length === 0 ? (
+            <p className="py-6 text-[15px] lg:text-[17px] text-ink-soft">{emptyText}</p>
+        ) : (
+            <ol className="pt-1">
+                {exams.map((exam, idx) => {
+                    // A date is printed once per day, like a real timetable
+                    const showDate = idx === 0 || dayKeyOf(exams[idx - 1]) !== dayKeyOf(exam);
+                    return <TimetableRow key={idx} exam={exam} kind={kind} isNext={nextExam === exam} showDate={showDate} now={now} />;
+                })}
+            </ol>
+        )}
+    </section>
+);
+
+const TABS = [
+    { id: 'all', label: 'All', kind: null },
+    { id: 'theory', label: 'Theory', kind: 'theory' },
+    { id: 'practical', label: 'Practical', kind: 'practical' },
+];
+
+const badge = 'ml-1.5 inline-block min-w-[1.5rem] px-1.5 rounded-full text-[12px] lg:text-[13px] leading-[20px] font-bold tnum text-center';
+
+const ScheduleCard = ({ student }) => {
+    const now = useNow();
+    const [rollCopied, setRollCopied] = useFlash();
+    const [calendarDone, setCalendarDone] = useFlash();
+    const [activeTab, setActiveTab] = useState('all');
+    const [hideDone, setHideDone] = useState(false);
+    const [showHelp, setShowHelp] = useState(false);
+
+    // Chronological order (sheets list exams in arbitrary order)
     const theoryExams = useMemo(() => sortExams(student?.theory || []), [student]);
     const practicalExams = useMemo(() => sortExams(student?.practical || []), [student]);
     const { exams: atktExams, status: atktStatus } = useAtkt(student?.rollNo);
-    // Students with ATKT see only their re-exams; their old (finished) schedule is hidden
+    // Students with ATKT see only their re-exams; their finished schedule is hidden
     const hasAtkt = atktExams.length > 0;
     const atktLoading = atktStatus === 'loading';
+    const atktFailed = atktStatus === 'error';
+
+    const next = useMemo(() => {
+        const pool = hasAtkt ? atktExams : [...theoryExams, ...practicalExams];
+        return findNext(pool, now);
+    }, [hasAtkt, atktExams, theoryExams, practicalExams, now]);
+
+    const roll = student ? String(student.officialRollNo || student.rollNo) : '';
+
+    const copyRoll = async () => {
+        if (await copyText(roll, `Roll number ${roll} copied`)) setRollCopied(true);
+    };
+
+    // Keyboard shortcut: press C to copy the roll number (when not typing)
+    useEffect(() => {
+        if (!roll) return undefined;
+        const onKey = (e) => {
+            const tag = document.activeElement?.tagName;
+            if (e.metaKey || e.ctrlKey || e.altKey || tag === 'INPUT' || tag === 'TEXTAREA') return;
+            if (e.key === 'c' || e.key === 'C') {
+                e.preventDefault();
+                copyText(roll, `Roll number ${roll} copied`).then((ok) => ok && setRollCopied(true));
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [roll, setRollCopied]);
 
     if (!student) return null;
+
+    const allRegular = [...theoryExams, ...practicalExams];
+    const doneCount = allRegular.filter((e) => isExamCompleted(e, now)).length;
+    const canHideDone = !hasAtkt && doneCount > 0 && doneCount < allRegular.length;
+    const visible = (list) => (hideDone && canHideDone ? list.filter((e) => !isExamCompleted(e, now)) : list);
 
     const handleExport = () => {
         const icsContent = generateICS(hasAtkt
             ? { ...student, theory: [], practical: [], reexams: atktExams }
             : student);
-        downloadICS(`${student.name.replace(/[^a-z0-9]+/gi, '_')}_Schedule.ics`, icsContent);
+        downloadICS(`${student.name.replace(/[^a-z0-9]+/gi, '_')}_Exams.ics`, icsContent);
+        setCalendarDone(true);
+        toast('Calendar file downloaded. Open it to add your exams.');
     };
 
-    const handleCopyRoll = async () => {
+    const handleShare = async () => {
+        const url = `${window.location.origin}/?roll=${encodeURIComponent(student.rollNo)}`;
         try {
-            await navigator.clipboard.writeText(student.officialRollNo || student.rollNo);
-            setIsCopied(true);
-            setTimeout(() => setIsCopied(false), 2000);
+            if (navigator.share) await navigator.share({ title: `${student.name}: exam schedule`, url });
+            else await copyText(url, 'Link copied. Paste it anywhere to open this schedule.');
         } catch {
-            /* clipboard unavailable (e.g. non-HTTPS) */
+            /* share sheet dismissed */
         }
     };
 
-    const containerVariants = {
-        hidden: { opacity: 0, y: 15 },
-        show: {
-            opacity: 1,
-            y: 0,
-            transition: { staggerChildren: 0.04 }
+    const nextLine = (() => {
+        if (atktLoading) return null;
+        if (!next) {
+            const total = hasAtkt ? atktExams.length : allRegular.length;
+            return <span className="text-ink-soft">{total > 0 ? 'All your exams are done.' : 'No exams scheduled yet.'}</span>;
         }
-    };
+        const { weekday, day } = dateParts(next.exam);
+        const rel = relativeDayLabel(next.parsed.dayKey, now);
+        const nearDay = rel === 'Today' || rel === 'Tomorrow';
+        const when = nearDay ? rel.toLowerCase() : `${weekday} ${day}`;
+        const start = String(next.exam.time || '').split(/\s*[-–—]\s*/)[0];
+        const room = hasValue(next.exam.location) ? next.exam.location : next.exam.classroom;
+        const startsIn = next.parsed.start.getTime() - now;
+        const countdown = startsIn <= 0 ? 'happening now' : rel === 'Today' ? `in ${formatCountdown(startsIn)}` : nearDay ? null : rel.toLowerCase();
+        return (
+            <>
+                <span className="text-ink-soft">Next: </span>
+                <span className="highlight font-bold">{next.exam.subject}</span>
+                <span className="text-ink-soft tnum">, {when}{start ? ` at ${start}` : ''}{hasValue(room) ? `, ${room}` : ''}</span>
+                {countdown && <span className="ml-2 whitespace-nowrap text-[0.9em] font-bold text-ink tnum">({countdown})</span>}
+            </>
+        );
+    })();
 
     return (
-        <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="show"
-            className="w-full space-y-6 sm:space-y-8"
-        >
-            {/* Student Header Card - Big Prominent Roll Number & Compact Calendar Pill */}
-            <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-[#0c101c]/90 border border-slate-200/90 dark:border-white/10 p-5 sm:p-8 shadow-xl dark:shadow-none transition-colors duration-300">
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-cyan-500 to-purple-500" />
-                <div className="absolute top-0 right-0 w-72 sm:w-96 h-72 sm:h-96 pointer-events-none bg-[radial-gradient(closest-side,rgba(16,185,129,0.12),transparent)]" aria-hidden="true" />
-
-                <div className="flex flex-col md:flex-row items-center justify-between gap-5 sm:gap-6 relative z-10">
-                    <div className="text-center md:text-left space-y-3 w-full md:w-auto">
-                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5 sm:gap-3">
-                            <h2 className="text-2xl sm:text-4xl md:text-5xl font-extrabold font-heading text-slate-900 dark:text-white tracking-tight leading-tight">
-                                {student.name}
-                            </h2>
-                            {student.batch && (
-                                <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[11px] sm:text-xs font-mono font-bold bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
-                                    Batch {student.batch}
-                                </span>
-                            )}
-                            {student.cohort && (
-                                <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[11px] sm:text-xs font-mono font-bold bg-purple-100 dark:bg-purple-500/10 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-500/20">
-                                    Cohort: {student.cohort}
-                                </span>
-                            )}
-                        </div>
-
-                        {/* PROMINENT ROLL NUMBER BADGE WITH TOUCH-FRIENDLY COPY */}
-                        <div className="inline-flex items-center gap-2.5 px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl bg-emerald-100/80 dark:bg-emerald-500/15 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-mono text-xl sm:text-2xl md:text-3xl font-black tracking-wider shadow-sm">
-                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 flex-shrink-0" />
-                            <span className="select-all">{student.officialRollNo || student.rollNo}</span>
+        <div className="w-full space-y-4 sm:space-y-5 lg:space-y-6">
+            {/* Admit-card style header */}
+            <section className="reveal bg-paper border border-rule rounded-xl p-4 sm:p-6 lg:p-8 print:border-0 print:p-0" aria-label={`Schedule for ${student.name}`}>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                        <h2 className="text-[28px] sm:text-[40px] lg:text-[52px] font-extrabold leading-[1.05] tracking-[-0.025em] break-words">
+                            {student.name}
+                        </h2>
+                        <div className="mt-3 lg:mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
+                            {/* The roll number is one big copy button: tap anywhere on it */}
                             <button
-                                onClick={handleCopyRoll}
-                                className="ml-1 min-w-[36px] min-h-[36px] flex items-center justify-center hover:bg-emerald-200 dark:hover:bg-emerald-500/20 rounded-xl transition-colors text-emerald-700 dark:text-emerald-400 active:scale-90"
-                                title="Copy Roll Number"
-                                aria-label="Copy Roll Number"
+                                onClick={copyRoll}
+                                className={`group inline-flex items-center gap-3 rounded-lg border px-3 lg:px-4 h-12 lg:h-14 transition-colors ${rollCopied ? 'pop border-practical bg-practical-tint' : 'border-rule hover:border-ink-faint bg-desk/60'}`}
+                                aria-label={`Copy roll number ${roll}`}
+                                title="Copy roll number (C)"
                             >
-                                {isCopied ? <Check size={18} className="text-emerald-600 dark:text-emerald-400" /> : <Copy size={18} />}
+                                <span className="text-[13px] lg:text-[15px] text-ink-faint">Roll no.</span>
+                                <span className="tnum text-[20px] lg:text-[26px] font-extrabold tracking-[0.01em] text-ink">{roll}</span>
+                                <span className={`inline-flex items-center gap-1 text-[13px] lg:text-[15px] font-bold ${rollCopied ? 'text-practical' : 'text-ink-soft group-hover:text-ink'}`}>
+                                    {rollCopied ? <><Check size={16} strokeWidth={2.5} /> Copied</> : <><Copy size={15} /> Copy</>}
+                                </span>
                             </button>
+                            <dl className="flex flex-wrap gap-x-4 gap-y-1 text-[15px] lg:text-[17px]">
+                                {student.batch && (<div className="flex gap-2"><dt className="text-ink-faint">Batch</dt><dd className="tnum font-semibold">{student.batch}</dd></div>)}
+                                {student.cohort && (<div className="flex gap-2"><dt className="text-ink-faint">Cohort</dt><dd className="font-semibold">{student.cohort}</dd></div>)}
+                            </dl>
                         </div>
                         {student.rollPending && (
-                            <p className="max-w-sm mx-auto md:mx-0 text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl px-3 py-2">
-                                This roll number is being verified with the college. Your schedule below is correct.
+                            <p className="mt-2 text-[14px] lg:text-[16px] text-ink-soft">
+                                Your roll number is being verified with the college. The schedule below is correct.
                             </p>
                         )}
                     </div>
 
-                    {/* COMPACT CALENDAR BUTTON */}
-                    <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={handleExport}
-                        className="px-4 py-2.5 sm:px-5 sm:py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-2xl transition-all border border-slate-200 dark:border-white/10 flex items-center gap-2 text-xs sm:text-sm whitespace-nowrap active:scale-95 self-center md:self-start min-h-[44px]"
-                        title="Export schedule to calendar file"
-                    >
-                        <Calendar size={16} className="text-emerald-600 dark:text-emerald-400" />
-                        <span>Add to Calendar</span>
-                    </motion.button>
+                    <div className="flex items-center gap-2 flex-shrink-0 print:hidden">
+                        <button
+                            onClick={handleExport}
+                            className="inline-flex items-center gap-2 h-11 lg:h-12 px-4 lg:px-5 rounded-md bg-ink text-paper font-bold text-[15px] lg:text-[16px] hover:opacity-90 active:opacity-80 transition-opacity"
+                        >
+                            {calendarDone ? <><Check size={18} /> File downloaded</> : <><CalendarPlus size={18} /> Add to calendar</>}
+                        </button>
+                        <button
+                            onClick={handleShare}
+                            className="h-11 w-11 lg:h-12 lg:w-12 inline-flex items-center justify-center rounded-md border border-rule text-ink-soft hover:text-ink hover:border-ink-faint transition-colors"
+                            aria-label="Share schedule link"
+                            title="Share schedule link"
+                        >
+                            <Share2 size={18} />
+                        </button>
+                    </div>
                 </div>
-            </div>
 
-            {/* ATKT re-exams: only rendered for students who have them */}
+                {nextLine && (
+                    <p className={`mt-4 lg:mt-5 rounded-lg px-3.5 lg:px-4 py-2.5 lg:py-3 text-[16px] lg:text-[19px] leading-relaxed ${next ? 'bg-mark-tint' : 'bg-desk'}`}>{nextLine}</p>
+                )}
+            </section>
+
+            {atktFailed && (
+                <p className="text-[14px] lg:text-[16px] text-ink-soft" role="status">
+                    Couldn't check for re-exams right now. Trying again in a few seconds.
+                </p>
+            )}
+
             {atktLoading ? (
-                <div className="rounded-3xl border border-slate-200/90 dark:border-white/10 bg-white dark:bg-[#0c101c]/50 p-5 sm:p-6 space-y-3 animate-pulse" aria-label="Loading schedule">
-                    <div className="h-5 w-40 rounded-lg bg-slate-200 dark:bg-white/10" />
-                    <div className="h-16 rounded-2xl bg-slate-100 dark:bg-white/5" />
-                    <div className="h-16 rounded-2xl bg-slate-100 dark:bg-white/5" />
+                <div className="grid lg:grid-cols-2 gap-4 sm:gap-5">
+                    <SheetSkeleton />
+                    <SheetSkeleton className="hidden lg:block" />
                 </div>
             ) : hasAtkt ? (
-                <AtktSection exams={atktExams} />
+                <AtktSection exams={atktExams} nextExam={next?.exam} now={now} />
             ) : (
                 <>
-                {/* Mobile-Only Segmented Tabs (Hidden on PC/lg screens) */}
-                <div className="flex lg:hidden items-stretch gap-1 p-1 bg-slate-100 dark:bg-[#0c101c]/90 rounded-2xl border border-slate-200/90 dark:border-white/10 w-full max-w-md mx-auto shadow-inner">
-                    <button
-                        onClick={() => setActiveMobileTab('all')}
-                        className={`flex-auto inline-flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap py-2 px-1.5 min-[360px]:px-2 text-xs max-[359px]:font-sans font-mono font-bold rounded-xl transition-all min-h-[40px] ${
-                            activeMobileTab === 'all'
-                                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
-                                : 'text-slate-500 [@media(hover:hover)]:hover:text-slate-900 dark:[@media(hover:hover)]:hover:text-white'
-                        }`}
-                    >
-                        All <span className="text-[10px] px-1.5 py-px rounded-md bg-black/5 dark:bg-white/10">{theoryExams.length + practicalExams.length}</span>
-                    </button>
-                    <button
-                        onClick={() => setActiveMobileTab('theory')}
-                        className={`flex-auto inline-flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap py-2 px-1.5 min-[360px]:px-2 text-xs max-[359px]:font-sans font-mono font-bold rounded-xl transition-all min-h-[40px] ${
-                            activeMobileTab === 'theory'
-                                ? 'bg-purple-600 text-white shadow-sm'
-                                : 'text-slate-500 [@media(hover:hover)]:hover:text-purple-600 dark:[@media(hover:hover)]:hover:text-purple-400'
-                        }`}
-                    >
-                        Theory <span className="text-[10px] px-1.5 py-px rounded-md bg-black/5 dark:bg-white/10">{theoryExams.length}</span>
-                    </button>
-                    <button
-                        onClick={() => setActiveMobileTab('practical')}
-                        className={`flex-auto inline-flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap py-2 px-1.5 min-[360px]:px-2 text-xs max-[359px]:font-sans font-mono font-bold rounded-xl transition-all min-h-[40px] ${
-                            activeMobileTab === 'practical'
-                                ? 'bg-emerald-600 text-white shadow-sm'
-                                : 'text-slate-500 [@media(hover:hover)]:hover:text-emerald-600 dark:[@media(hover:hover)]:hover:text-emerald-400'
-                        }`}
-                    >
-                        Practical <span className="text-[10px] px-1.5 py-px rounded-md bg-black/5 dark:bg-white/10">{practicalExams.length}</span>
-                    </button>
-                </div>
-
-                {/* Theory vs Practical Split Layout (Side-by-side on PC, Tabbed/Stacked on Mobile) */}
-                <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 items-start">
-                    {/* Theory Section */}
-                    <div className={`flex-col h-full bg-white dark:bg-[#0c101c]/50 rounded-3xl p-5 sm:p-6 border border-slate-200/90 dark:border-white/10 shadow-sm dark:shadow-none ${
-                        activeMobileTab === 'practical' ? 'hidden lg:flex' : 'flex'
-                    }`}>
-                        <div className="flex items-center justify-between mb-5 sm:mb-6 pb-3.5 sm:pb-4 border-b border-slate-200/60 dark:border-white/5">
-                            <div className="flex items-center gap-2.5 sm:gap-3">
-                                <div className="p-2 sm:p-2.5 bg-purple-100 dark:bg-purple-500/10 rounded-2xl border border-purple-200 dark:border-purple-500/20 text-purple-600 dark:text-purple-400 flex-shrink-0">
-                                    <BookOpen size={20} className="sm:w-5 sm:h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="text-lg sm:text-xl font-bold font-heading text-slate-900 dark:text-white">Theory Schedule</h3>
-                                    <p className="text-[11px] sm:text-xs text-slate-500 font-mono">Classroom & Written Exams</p>
-                                </div>
-                            </div>
-                            <span className="text-[10px] sm:text-xs font-mono font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-purple-100 dark:bg-purple-500/10 text-purple-800 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20 flex-shrink-0">
-                                {theoryExams.length} Papers
-                            </span>
+                    <div className="flex items-end justify-between gap-3 border-b border-rule lg:border-b-0 print:hidden">
+                        {/* Tabs on phones; both sheets side by side from lg */}
+                        <div className="lg:hidden flex" role="tablist" aria-label="Exam type">
+                            {TABS.map((t) => {
+                                const count = t.id === 'all' ? allRegular.length : t.id === 'theory' ? theoryExams.length : practicalExams.length;
+                                const active = activeTab === t.id;
+                                const activeBorder = t.kind ? KIND[t.kind].rule : 'border-ink';
+                                const activeBadge = t.kind ? `${KIND[t.kind].tint} text-ink` : 'bg-desk text-ink';
+                                return (
+                                    <button
+                                        key={t.id}
+                                        role="tab"
+                                        aria-selected={active}
+                                        onClick={() => setActiveTab(t.id)}
+                                        className={`-mb-px h-11 px-2.5 sm:px-4 text-[15px] font-bold whitespace-nowrap border-b-[3px] transition-colors ${active ? `${activeBorder} text-ink` : 'border-transparent text-ink-faint hover:text-ink-soft'}`}
+                                    >
+                                        {t.label}<span className={`${badge} ${active ? activeBadge : 'bg-desk text-ink-faint'}`}>{count}</span>
+                                    </button>
+                                );
+                            })}
                         </div>
-
-                        <div className="space-y-3.5 sm:space-y-4 flex-1">
-                            {theoryExams.length === 0 ? (
-                                <div className="h-full min-h-[160px] flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900/30 rounded-2xl p-6 border border-dashed border-slate-200 dark:border-white/10 text-center text-slate-500 dark:text-slate-400">
-                                    <AlertCircle className="mb-2 opacity-40 w-8 h-8 sm:w-10 sm:h-10" />
-                                    <p className="text-xs sm:text-sm">No theory exams scheduled.</p>
-                                </div>
-                            ) : (
-                                theoryExams.map((exam, idx) => (
-                                    <ExamItem key={idx} exam={exam} type="theory" />
-                                ))
+                        <div className="ml-auto mb-1 lg:mb-0 flex items-center gap-1">
+                            {canHideDone && (
+                                <label className="inline-flex items-center gap-2 h-9 px-2 text-[14px] lg:text-[15px] text-ink-soft cursor-pointer select-none whitespace-nowrap">
+                                    <input
+                                        type="checkbox"
+                                        checked={hideDone}
+                                        onChange={(e) => setHideDone(e.target.checked)}
+                                        className="w-4 h-4 accent-[var(--ink)]"
+                                    />
+                                    Hide finished
+                                </label>
                             )}
+                            <PrintButton />
                         </div>
                     </div>
 
-                    {/* Practical Section */}
-                    <div className={`flex-col h-full bg-white dark:bg-[#0c101c]/50 rounded-3xl p-5 sm:p-6 border border-slate-200/90 dark:border-white/10 shadow-sm dark:shadow-none ${
-                        activeMobileTab === 'theory' ? 'hidden lg:flex' : 'flex'
-                    }`}>
-                        <div className="flex items-center justify-between mb-5 sm:mb-6 pb-3.5 sm:pb-4 border-b border-slate-200/60 dark:border-white/5">
-                            <div className="flex items-center gap-2.5 sm:gap-3">
-                                <div className="p-2 sm:p-2.5 bg-emerald-100 dark:bg-emerald-500/10 rounded-2xl border border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex-shrink-0">
-                                    <Code size={20} className="sm:w-5 sm:h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="text-lg sm:text-xl font-bold font-heading text-slate-900 dark:text-white">Practical Viva</h3>
-                                    <p className="text-[11px] sm:text-xs text-slate-500 font-mono">Lab & Examiner Evaluation</p>
-                                </div>
-                            </div>
-                            <span className="text-[10px] sm:text-xs font-mono font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 flex-shrink-0">
-                                {practicalExams.length} Slots
-                            </span>
-                        </div>
-
-                        <div className="space-y-3.5 sm:space-y-4 flex-1">
-                            {practicalExams.length === 0 ? (
-                                <div className="h-full min-h-[160px] flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900/30 rounded-2xl p-6 border border-dashed border-slate-200 dark:border-white/10 text-center text-slate-500 dark:text-slate-400">
-                                    <AlertCircle className="mb-2 opacity-40 w-8 h-8 sm:w-10 sm:h-10" />
-                                    <p className="text-xs sm:text-sm">No practical exams scheduled.</p>
-                                </div>
-                            ) : (
-                                practicalExams.map((exam, idx) => (
-                                    <ExamItem key={idx} exam={exam} type="practical" />
-                                ))
-                            )}
-                        </div>
+                    <div key={`${activeTab}-${hideDone}`} className="swap grid lg:grid-cols-2 gap-4 sm:gap-5 lg:gap-6 items-start">
+                        <Sheet
+                            title="Theory"
+                            kind="theory"
+                            note={`${theoryExams.length} ${theoryExams.length === 1 ? 'paper' : 'papers'}`}
+                            exams={visible(theoryExams)}
+                            nextExam={next?.exam}
+                            emptyText={theoryExams.length ? 'All theory papers are done.' : 'No theory exams scheduled.'}
+                            now={now}
+                            style={{ animationDelay: '60ms' }}
+                            className={activeTab === 'practical' ? 'hidden lg:block print:block' : ''}
+                        />
+                        <Sheet
+                            title="Practical"
+                            kind="practical"
+                            note={`${practicalExams.length} ${practicalExams.length === 1 ? 'slot' : 'slots'}`}
+                            exams={visible(practicalExams)}
+                            nextExam={next?.exam}
+                            emptyText={practicalExams.length ? 'All practicals are done.' : 'No practical exams scheduled.'}
+                            now={now}
+                            style={{ animationDelay: '120ms' }}
+                            className={activeTab === 'theory' ? 'hidden lg:block print:block' : ''}
+                        />
                     </div>
-                </div>
                 </>
             )}
 
-            {/* Calendar Tutorial Card */}
-            <motion.div
-                variants={itemVariants}
-                className="relative overflow-hidden rounded-3xl bg-white dark:bg-[#0c101c]/90 border border-slate-200/90 dark:border-white/10 p-5 sm:p-8 shadow-xl dark:shadow-none"
-            >
-                <div className="flex flex-col md:flex-row items-center justify-between gap-6 sm:gap-8">
-                    <div className="space-y-3 text-center md:text-left w-full md:max-w-lg">
-                        <div className="flex items-center justify-center md:justify-start gap-2 text-emerald-600 dark:text-emerald-500 font-bold text-base sm:text-lg">
-                            <Calendar size={20} />
-                            <span>Calendar Sync Workflow</span>
-                        </div>
-                        <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                            Optional calendar sync for Google Calendar, Apple Calendar, or Outlook.
-                        </p>
-                        <ol className="text-xs font-mono text-slate-600 dark:text-slate-400 space-y-1.5 list-decimal list-inside bg-slate-50 dark:bg-slate-900/60 p-3.5 sm:p-4 rounded-2xl border border-slate-200/60 dark:border-white/5">
-                            <li>Click <strong>Add to Calendar</strong> button</li>
-                            <li>Open the downloaded <code className="text-emerald-600 dark:text-emerald-400">.ics</code> file</li>
-                            <li>Confirm <strong>Add All</strong> in your calendar app</li>
+            {/* Calendar help: one quiet line, details on demand */}
+            <section className="print:hidden">
+                <button
+                    onClick={() => setShowHelp((v) => !v)}
+                    aria-expanded={showHelp}
+                    className="inline-flex items-center gap-1.5 text-[15px] lg:text-[17px] font-semibold text-ink-soft hover:text-ink rounded-md"
+                >
+                    How to add this to your phone's calendar
+                    <ChevronDown size={16} className={`transition-transform ${showHelp ? 'rotate-180' : ''}`} />
+                </button>
+                {showHelp && (
+                    <div className="swap mt-3 bg-paper border border-rule rounded-xl p-4 sm:p-5 max-w-2xl">
+                        <ol className="list-decimal pl-5 space-y-1 text-[15px] lg:text-[17px] text-ink-soft">
+                            <li>Tap <strong className="text-ink">Add to calendar</strong> above.</li>
+                            <li>Open the downloaded file.</li>
+                            <li>Choose <strong className="text-ink">Add all</strong> in Google Calendar, Apple Calendar or Outlook.</li>
                         </ol>
+                        <p className="mt-2 text-[14px] lg:text-[15px] text-ink-faint">You'll get a reminder a day before and an hour before each exam.</p>
+                        <video src={tutVideo} controls playsInline preload="none" className="mt-4 w-full rounded-lg border border-rule bg-ink" />
                     </div>
-
-                    <motion.button
-                        whileHover={{ scale: 1.04 }}
-                        whileTap={{ scale: 0.96 }}
-                        onClick={handleExport}
-                        className="w-full md:w-auto px-6 py-3.5 sm:px-8 sm:py-4 bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white font-extrabold rounded-2xl transition-all shadow-xl shadow-emerald-600/30 dark:shadow-emerald-500/30 flex items-center justify-center gap-3 text-sm sm:text-base cursor-pointer active:scale-95 min-h-[48px]"
-                    >
-                        <Calendar size={20} className="text-white" />
-                        <span>Add to Calendar</span>
-                    </motion.button>
-                </div>
-
-                {/* Collapsible Video Tutorial (Saves 8.4MB bandwidth on page load) */}
-                <div className="mt-6 sm:mt-8 pt-5 border-t border-slate-200/60 dark:border-white/5">
-                    <button
-                        onClick={() => setShowVideo(prev => !prev)}
-                        className="w-full flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-900 border border-slate-200/80 dark:border-white/5 text-slate-800 dark:text-slate-200 text-xs sm:text-sm font-semibold transition-all group active:scale-[0.99] min-h-[48px]"
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                <Play size={14} className="ml-0.5" />
-                            </div>
-                            <div className="text-left">
-                                <div className="font-bold font-sans">Step-by-Step Video Guide</div>
-                                <div className="text-[11px] font-mono text-slate-500 font-normal">
-                                    {showVideo ? 'Click to collapse tutorial video' : 'Click to watch quick tutorial video (8 MB)'}
-                                </div>
-                            </div>
-                        </div>
-                        {showVideo ? <ChevronUp size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
-                    </button>
-
-                    <AnimatePresence>
-                        {showVideo && (
-                            <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                transition={{ duration: 0.3 }}
-                                className="mt-3.5 rounded-2xl overflow-hidden border border-slate-200/80 dark:border-white/10 shadow-xl bg-slate-900"
-                            >
-                                <video
-                                    src={tutVideo}
-                                    controls
-                                    autoPlay
-                                    playsInline
-                                    preload="metadata"
-                                    className="w-full h-auto object-cover opacity-95 hover:opacity-100 transition-opacity"
-                                />
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-            </motion.div>
-        </motion.div>
+                )}
+            </section>
+        </div>
     );
 };
 

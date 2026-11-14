@@ -18,17 +18,20 @@
   <meta name="description" content="Find your theory and practical exam schedule by name or roll number, and add it to your calendar." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Sora:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap" />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Sora:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap" media="print" onload="this.media='all'" />
-  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Sora:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap" /></noscript>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;700;800&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;700;800&display=swap" media="print" onload="this.media='all'" />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;700;800&display=swap" /></noscript>
   <link rel="manifest" href="/manifest.json" />
-  <meta name="theme-color" content="#0b0f19" />
+  <meta name="theme-color" content="#ffffff" />
   <script>
     // Apply the saved theme before first paint to avoid a light/dark flash
     try {
-      var t = localStorage.getItem('theme') || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
-      if (t === 'dark') document.documentElement.classList.add('dark');
-    } catch (e) { document.documentElement.classList.add('dark'); }
+      var t = localStorage.getItem('theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      if (t === 'dark') {
+        document.documentElement.classList.add('dark');
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', '#1f283c');
+      }
+    } catch (e) {}
   </script>
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9010905957176372" crossorigin="anonymous"></script>
 </head>
@@ -37,7 +40,13 @@
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
   <script>
-    if ('serviceWorker' in navigator) {
+    var isLocalDev = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+    if ('serviceWorker' in navigator && isLocalDev) {
+      // No offline cache while developing: remove any old worker and its cache
+      navigator.serviceWorker.getRegistrations().then(function (regs) { regs.forEach(function (r) { r.unregister(); }); });
+      if (window.caches) caches.keys().then(function (keys) { keys.forEach(function (k) { caches.delete(k); }); });
+    }
+    if ('serviceWorker' in navigator && !isLocalDev) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
           .then((registration) => {
