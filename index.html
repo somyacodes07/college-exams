@@ -40,7 +40,13 @@
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
   <script>
-    if ('serviceWorker' in navigator) {
+    var isLocalDev = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+    if ('serviceWorker' in navigator && isLocalDev) {
+      // No offline cache while developing: remove any old worker and its cache
+      navigator.serviceWorker.getRegistrations().then(function (regs) { regs.forEach(function (r) { r.unregister(); }); });
+      if (window.caches) caches.keys().then(function (keys) { keys.forEach(function (k) { caches.delete(k); }); });
+    }
+    if ('serviceWorker' in navigator && !isLocalDev) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
           .then((registration) => {

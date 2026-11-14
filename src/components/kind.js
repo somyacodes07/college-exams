@@ -9,3 +9,6 @@ export const KIND = {
   practical: { bar: 'border-practical', rule: 'border-practical', dot: 'bg-practical', tint: 'bg-practical-tint' },
   reexam: { bar: 'border-reexam', rule: 'border-reexam', dot: 'bg-reexam', tint: 'bg-reexam-tint' },
 };
+
+/** Shared timetable row layout: date column, then the exam. */
+export const ROW_GRID = 'grid grid-cols-[4.75rem_1fr] sm:grid-cols-[5.5rem_1fr] lg:grid-cols-[6.75rem_1fr] gap-x-3 lg:gap-x-4';

@@ -3,7 +3,9 @@ import { Github, Instagram, Sun, Moon, Database } from 'lucide-react';
 import { Analytics } from '@vercel/analytics/react';
 import Search from './components/Search';
 import ScheduleCard from './components/ScheduleCard';
-import AdPlacement from './components/AdPlacement';
+import ScheduleSkeleton from './components/ScheduleSkeleton';
+import QuickCopy from './components/QuickCopy';
+import Toast from './components/Toast';
 import { getStudentCount, getStudentByRoll, checkServerHealth, getBatches, subscribeToIndex } from './utils/api';
 
 const AdminModal = lazy(() => import('./components/AdminModal'));
@@ -34,6 +36,8 @@ function App() {
   const [batches, setBatches] = useState(getBatches);
   const [syncVersion, setSyncVersion] = useState(0);
   const [dbStatus, setDbStatus] = useState('connecting');
+  // True while a schedule is being fetched (shared link, search pick, quick open)
+  const [opening, setOpening] = useState(() => !!getRollFromUrl());
 
   const [theme, setTheme] = useState(() => {
     try {
@@ -68,13 +72,20 @@ function App() {
 
   // Deep link: ?roll=XXXX opens that student's schedule, and back/forward work
   const openRoll = useCallback(async (roll) => {
-    const student = roll ? await getStudentByRoll(roll) : null;
+    if (roll) setOpening(true);
+    const student = roll ? await getStudentByRoll(roll).catch(() => null) : null;
     setSelectedStudent(student || null);
+    setOpening(false);
   }, []);
 
   useEffect(() => {
     const initialRoll = getRollFromUrl();
-    if (initialRoll) getStudentByRoll(initialRoll).then((s) => s && setSelectedStudent(s));
+    if (initialRoll) {
+      getStudentByRoll(initialRoll)
+        .then((s) => s && setSelectedStudent(s))
+        .catch(() => {})
+        .finally(() => setOpening(false));
+    }
     const onPop = () => openRoll(getRollFromUrl());
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
@@ -82,6 +93,7 @@ function App() {
 
   const handleSelectStudent = useCallback((student) => {
     setSelectedStudent(student);
+    setOpening(false);
     setRollInUrl(student?.rollNo);
     if (student) {
       requestAnimationFrame(() => {
@@ -106,6 +118,14 @@ function App() {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
+  // Opening a recent student from the home-page quick copy card
+  const openRecent = useCallback(async (s) => {
+    setOpening(true);
+    const student = await getStudentByRoll(s.rollNo).catch(() => null);
+    setOpening(false);
+    if (student) handleSelectStudent(student);
+  }, [handleSelectStudent]);
+
   const toggleTheme = () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
 
   const iconBtn = 'w-10 h-10 inline-flex items-center justify-center rounded-md text-ink-soft hover:text-ink hover:bg-desk transition-colors';
@@ -116,14 +136,14 @@ function App() {
         className="sticky top-0 z-40 bg-paper/95 border-b border-rule print:hidden"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
-        <div className="mx-auto max-w-5xl h-14 px-4 flex items-center justify-between gap-3">
+        <div className="mx-auto max-w-6xl h-14 lg:h-16 px-4 lg:px-6 flex items-center justify-between gap-3">
           <button
             onClick={() => handleSelectStudent(null)}
             className="flex items-center gap-2.5 min-w-0 rounded-md"
             aria-label="Exam Scheduler home"
           >
-            <img src="/logo.svg" alt="" width="28" height="28" className="w-7 h-7 rounded-[7px] flex-shrink-0 dark:ring-1 dark:ring-rule" />
-            <span className="font-bold text-[17px] tracking-[-0.01em] truncate">Exam Scheduler</span>
+            <img src="/logo.svg" alt="" width="28" height="28" className="w-7 h-7 lg:w-8 lg:h-8 rounded-[7px] flex-shrink-0 dark:ring-1 dark:ring-rule" />
+            <span className="font-bold text-[17px] lg:text-[19px] tracking-[-0.01em] truncate">Exam Scheduler</span>
           </button>
 
           <div className="flex items-center gap-1">
@@ -148,26 +168,26 @@ function App() {
       </header>
 
       <main
-        className="mx-auto max-w-5xl px-4 pt-8 sm:pt-14"
+        className="mx-auto max-w-6xl px-4 lg:px-6 pt-8 sm:pt-14 lg:pt-16"
         style={{ paddingBottom: 'max(2.5rem, env(safe-area-inset-bottom))' }}
       >
         {!selectedStudent && (
-          <div className="max-w-2xl">
-            <h1 className="text-[2.25rem] sm:text-[3.25rem] font-extrabold leading-[1.05] tracking-[-0.025em]">
+          <div className="reveal max-w-3xl">
+            <h1 className="text-[2.25rem] sm:text-[3.25rem] lg:text-[4.25rem] font-extrabold leading-[1.03] tracking-[-0.03em]">
               Your exam date sheet
             </h1>
-            <p className="mt-3 text-[17px] text-ink-soft max-w-[34rem]">
+            <p className="mt-3 lg:mt-4 text-[17px] lg:text-[21px] text-ink-soft max-w-[36rem]">
               Theory papers, practical vivas and ATKT re‑exams, with time and room. Search your name or roll number.
             </p>
           </div>
         )}
 
         <div className={`print:hidden ${selectedStudent ? '' : 'mt-6 sm:mt-8'}`}>
-          <Search key={syncVersion} onSelectStudent={handleSelectStudent} selectedStudent={selectedStudent} />
+          <Search key={syncVersion} onSelectStudent={handleSelectStudent} selectedStudent={selectedStudent} onLoadingChange={setOpening} />
         </div>
 
         {!selectedStudent && (
-          <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-[14px] text-ink-soft" aria-label="Colour key">
+          <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-[14px] lg:text-[16px] text-ink-soft" aria-label="Colour key">
             <li className="inline-flex items-center gap-2"><span className="w-3 h-3 rounded-[3px] bg-theory" aria-hidden="true" />Theory</li>
             <li className="inline-flex items-center gap-2"><span className="w-3 h-3 rounded-[3px] bg-practical" aria-hidden="true" />Practical</li>
             <li className="inline-flex items-center gap-2"><span className="w-3 h-3 rounded-[3px] bg-reexam" aria-hidden="true" />Re-exam (ATKT)</li>
@@ -176,7 +196,7 @@ function App() {
         )}
 
         {!selectedStudent && batches.length > 0 && (
-          <p className="mt-4 text-[14px] text-ink-faint tnum max-w-2xl">
+          <p className="mt-4 text-[14px] lg:text-[16px] text-ink-faint tnum max-w-2xl">
             {studentCount > 0 ? `${studentCount.toLocaleString('en-IN')} students` : 'Students'} in batches{' '}
             {batches.slice().sort().map((b, i, all) => (
               <span key={b} className="whitespace-nowrap">{b}{i < all.length - 1 ? ', ' : '.'}</span>
@@ -185,10 +205,14 @@ function App() {
         )}
 
         <div id="schedule" className="mt-6 sm:mt-8 scroll-mt-20">
-          <ScheduleCard key={selectedStudent ? selectedStudent.rollNo : 'empty'} student={selectedStudent} />
+          {opening ? (
+            <ScheduleSkeleton />
+          ) : (
+            <ScheduleCard key={selectedStudent ? selectedStudent.rollNo : 'empty'} student={selectedStudent} />
+          )}
+          {!selectedStudent && !opening && <QuickCopy onOpen={openRecent} />}
         </div>
 
-        <div className="print:hidden"><AdPlacement /></div>
 
         <footer className="print:hidden mt-10 pt-5 border-t border-rule flex flex-wrap items-center justify-between gap-3 text-[14px] text-ink-soft">
           <span>
@@ -221,6 +245,7 @@ function App() {
         </Suspense>
       )}
 
+      <Toast />
       <Analytics />
     </div>
   );

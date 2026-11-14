@@ -15,10 +15,16 @@ export function useAtkt(rollNo) {
     if (!rollNo) return undefined;
     let active = true;
     let controller = null;
+    let retryTimer = null;
+    let lastLoad = 0;
 
     const load = async (initial = false) => {
       // Skip background refreshes while the tab is hidden, but always do the first load
       if (!initial && document.visibilityState === 'hidden') return;
+      // Focus + visibility events often fire together: one request is enough
+      if (!initial && Date.now() - lastLoad < 5000) return;
+      lastLoad = Date.now();
+      clearTimeout(retryTimer);
       controller?.abort();
       controller = new AbortController();
       try {
@@ -28,6 +34,8 @@ export function useAtkt(rollNo) {
         if (err?.name === 'AbortError' || !active) return;
         // Keep the last good data on a failed refresh; only flag an error if we never loaded
         setState((prev) => (prev.rollNo === rollNo && prev.status === 'ready' ? prev : { rollNo, exams: [], updatedAt: null, status: 'error' }));
+        // Try again soon rather than waiting for the next minute
+        retryTimer = setTimeout(() => load(true), 10000);
       }
     };
 
@@ -42,6 +50,7 @@ export function useAtkt(rollNo) {
       active = false;
       controller?.abort();
       clearInterval(timer);
+      clearTimeout(retryTimer);
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('focus', onFocus);
     };

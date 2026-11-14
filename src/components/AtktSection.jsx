@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check } from 'lucide-react';
 import { parseExamDateTime, isExamCompleted, relativeDayLabel, examDateParts, displayTime } from '../utils/dateUtils';
-import { KIND } from './kind';
+import { KIND, ROW_GRID } from './kind';
+import PrintButton from './PrintButton';
 
 const KIND_ORDER = ['Theory', 'Project Eval', 'Practical', 'Viva'];
 const semNumber = (s) => parseInt(String(s || '').replace(/\D/g, ''), 10) || 99;
@@ -60,32 +61,32 @@ const Row = ({ exam, kind, isNext, showDate, now }) => {
   const showType = exam.examType && !exam.examType.toLowerCase().startsWith(kind.toLowerCase().split(' ')[0]);
 
   return (
-    <li className={`grid grid-cols-[4.75rem_1fr] sm:grid-cols-[5.5rem_1fr] gap-x-3 ${showDate ? 'pt-3 border-t border-rule first:border-t-0' : 'pt-1'} pb-1`}>
+    <li className={`${ROW_GRID} ${showDate ? 'pt-3 lg:pt-4 border-t border-rule first:border-t-0' : 'pt-1'} pb-1`}>
       <div className="tnum leading-tight pt-0.5">
         {showDate && (
           <>
-            <div className={`text-[13px] ${isToday ? 'font-bold text-ink' : 'text-ink-faint'}`}>{parsed ? (isToday ? 'Today' : weekday) : ''}</div>
-            <div className={`text-[16px] font-bold ${completed ? 'text-ink-faint' : 'text-ink'}`}>{day}</div>
+            <div className={`text-[13px] lg:text-[15px] ${isToday ? 'font-bold text-ink' : 'text-ink-faint'}`}>{parsed ? (isToday ? 'Today' : weekday) : ''}</div>
+            <div className={`text-[16px] lg:text-[19px] font-bold ${completed ? 'text-ink-faint' : 'text-ink'}`}>{day}</div>
           </>
         )}
       </div>
-      <div className={`min-w-0 border-l-[3px] pl-3 py-0.5 pb-2 ${KIND.reexam.bar} ${completed ? 'opacity-55' : ''}`}>
+      <div className={`min-w-0 border-l-[3px] pl-3 lg:pl-4 py-0.5 pb-2 ${KIND.reexam.bar} ${completed ? 'opacity-55' : ''}`}>
         <div className="flex items-start justify-between gap-3">
-          <p className={`text-[16px] font-bold leading-snug break-words ${completed ? 'text-ink-faint' : 'text-ink'}`}>
+          <p className={`text-[16px] lg:text-[19px] font-bold leading-snug break-words ${completed ? 'text-ink-faint' : 'text-ink'}`}>
             {isNext ? <span className="highlight">{exam.subject}</span> : exam.subject}
           </p>
           {completed && (
-            <span className="flex-shrink-0 inline-flex items-center gap-1 text-[13px] text-ink-faint">
+            <span className="flex-shrink-0 inline-flex items-center gap-1 text-[13px] lg:text-[15px] text-ink-faint">
               <Check size={14} strokeWidth={2.5} /> Done
             </span>
           )}
         </div>
-        <p className={`tnum mt-0.5 text-[15px] whitespace-nowrap ${completed ? 'text-ink-faint' : 'text-ink-soft'}`}>
+        <p className={`tnum mt-0.5 text-[15px] lg:text-[17px] whitespace-nowrap ${completed ? 'text-ink-faint' : 'text-ink-soft'}`}>
           {exam.time ? displayTime(exam.time) : 'Time to be announced'}
         </p>
-        {showType && <p className="text-[14px] text-ink-soft">{exam.examType}</p>}
+        {showType && <p className="text-[14px] lg:text-[16px] text-ink-soft">{exam.examType}</p>}
         {/* Faculty and room are always shown, so students can see what's still pending */}
-        <dl className={`mt-1 grid grid-cols-[auto_1fr] gap-x-3 text-[14px] ${completed ? 'text-ink-faint' : ''}`}>
+        <dl className={`mt-1 grid grid-cols-[auto_1fr] gap-x-3 text-[14px] lg:text-[16px] ${completed ? 'text-ink-faint' : ''}`}>
           <dt className="text-ink-faint">Faculty</dt>
           <dd className={exam.faculty ? (completed ? '' : 'text-ink') : 'text-ink-faint italic'}>{exam.faculty || 'To be announced'}</dd>
           <dt className="text-ink-faint">Room</dt>
@@ -97,7 +98,7 @@ const Row = ({ exam, kind, isNext, showDate, now }) => {
 };
 
 const tabClass = (active) =>
-  `-mb-px h-11 px-3 sm:px-4 text-[15px] font-bold whitespace-nowrap border-b-[3px] transition-colors ${active ? `${KIND.reexam.rule} text-ink` : 'border-transparent text-ink-faint hover:text-ink-soft'}`;
+  `-mb-px h-11 lg:h-12 px-3 sm:px-4 text-[15px] lg:text-[16px] font-bold whitespace-nowrap border-b-[3px] transition-colors ${active ? `${KIND.reexam.rule} text-ink` : 'border-transparent text-ink-faint hover:text-ink-soft'}`;
 
 /** ATKT re-exams, split into the sheet's tabs (semester, then Theory / Project Eval). */
 const AtktSection = ({ exams, nextExam, now: nowProp }) => {
@@ -122,20 +123,22 @@ const AtktSection = ({ exams, nextExam, now: nowProp }) => {
   const upcoming = exams.filter((e) => !isExamCompleted(e, now)).length;
 
   return (
-    <section aria-label="ATKT re-exam schedule" className="bg-paper border border-rule rounded-xl px-4 sm:px-5 pt-4 pb-2 print:border-0 print:px-0">
+    <section aria-label="ATKT re-exam schedule" className="reveal bg-paper border border-rule rounded-xl px-4 sm:px-5 lg:px-6 pt-4 lg:pt-5 pb-2 print:border-0 print:px-0" style={{ animationDelay: '60ms' }}>
       <div className={`flex items-center justify-between gap-3 pb-3 border-b-[3px] ${KIND.reexam.rule}`}>
         <div className="flex items-center gap-2.5">
-          <h3 className="text-[20px] font-extrabold tracking-[-0.01em]">Re-exams</h3>
+          <h3 className="text-[20px] lg:text-[24px] font-extrabold tracking-[-0.01em]">Re-exams</h3>
           <span className="text-[12px] font-bold text-stamp border-[1.5px] border-stamp rounded-[3px] px-1.5 leading-[18px]">ATKT</span>
         </div>
-        <span className="text-[14px] text-ink-faint tnum">
+        <span className="text-[14px] lg:text-[15px] text-ink-faint tnum">
           {upcoming > 0 ? `${upcoming} of ${exams.length} to go` : 'All done'}
         </span>
       </div>
 
-      {groups.length > 1 && (
+      {/* Semester tabs, with Print at the end of the row */}
+      <div className="flex items-end gap-2 border-b border-rule">
+      {groups.length > 1 ? (
         <div
-          className={`flex overflow-x-auto overscroll-x-contain border-b border-rule [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${groups.length > 3 ? 'max-sm:[mask-image:linear-gradient(to_right,black_82%,transparent)]' : ''}`}
+          className={`flex min-w-0 flex-1 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${groups.length > 3 ? 'max-sm:[mask-image:linear-gradient(to_right,black_82%,transparent)]' : ''}`}
           role="tablist"
           aria-label="Semester"
         >
@@ -150,12 +153,16 @@ const AtktSection = ({ exams, nextExam, now: nowProp }) => {
                 onClick={() => setPicked({ semester: g.semester, kind: kindGroup.kind })}
                 className={tabClass(g.semester === semGroup.semester)}
               >
-                {g.semester}<span className={`ml-1.5 inline-block min-w-[1.5rem] px-1.5 rounded-full text-[12px] leading-[20px] font-bold tnum text-center ${g.semester === semGroup.semester ? 'bg-reexam-tint text-ink' : 'bg-desk text-ink-faint'}`}>{count}</span>
+                {g.semester}<span className={`ml-1.5 inline-block min-w-[1.5rem] px-1.5 rounded-full text-[12px] lg:text-[13px] leading-[20px] font-bold tnum text-center ${g.semester === semGroup.semester ? 'bg-reexam-tint text-ink' : 'bg-desk text-ink-faint'}`}>{count}</span>
               </button>
             );
           })}
         </div>
+      ) : (
+        <p className="flex-1 h-11 lg:h-12 flex items-center text-[15px] lg:text-[16px] font-bold">{semGroup.semester}</p>
       )}
+        <div className="flex-shrink-0 mb-1"><PrintButton /></div>
+      </div>
 
       {semGroup.kinds.length > 1 ? (
         <div className="mt-3 inline-flex rounded-md border border-rule p-0.5" role="tablist" aria-label="Exam type">
@@ -167,7 +174,7 @@ const AtktSection = ({ exams, nextExam, now: nowProp }) => {
                 role="tab"
                 aria-selected={active}
                 onClick={() => setPicked({ semester: semGroup.semester, kind: k.kind })}
-                className={`h-9 px-3 rounded-[5px] text-[14px] font-bold whitespace-nowrap transition-colors ${active ? 'bg-ink text-paper' : 'text-ink-soft hover:text-ink'}`}
+                className={`h-9 lg:h-10 px-3 lg:px-4 rounded-[5px] text-[14px] lg:text-[16px] font-bold whitespace-nowrap transition-colors ${active ? 'bg-ink text-paper' : 'text-ink-soft hover:text-ink'}`}
               >
                 {k.kind}<span className={`ml-1.5 inline-block min-w-[1.5rem] px-1.5 rounded-full text-[12px] leading-[20px] font-bold tnum text-center ${active ? 'bg-paper/20 text-paper' : 'bg-desk text-ink-faint'}`}>{k.items.length}</span>
               </button>
@@ -175,10 +182,10 @@ const AtktSection = ({ exams, nextExam, now: nowProp }) => {
           })}
         </div>
       ) : (
-        <p className="mt-3 text-[15px] font-bold text-ink-soft">{kindGroup.kind}</p>
+        <p className="mt-3 text-[15px] lg:text-[17px] font-bold text-ink-soft">{kindGroup.kind}</p>
       )}
 
-      <ol className="mt-1">
+      <ol key={`${semGroup.semester}-${kindGroup.kind}`} className="swap mt-1">
         {kindGroup.items.map((item, i) => {
           // A date is printed once per day, like a real timetable
           const prev = kindGroup.items[i - 1];

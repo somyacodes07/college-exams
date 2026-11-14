@@ -1,35 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useDeferredValue } from 'react';
-import { Search as SearchIcon, X, Loader2 } from 'lucide-react';
+import { Search as SearchIcon, X, Loader2, Copy } from 'lucide-react';
 import { getStudentByRoll, getSearchIndex, subscribeToIndex, rankStudents } from '../utils/api';
-
-const RECENT_KEY = 'recentStudents';
-const MAX_RECENT = 4;
-
-const readRecent = () => {
-    try {
-        const parsed = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
-        return Array.isArray(parsed) ? parsed.slice(0, MAX_RECENT) : [];
-    } catch {
-        return [];
-    }
-};
-
-const saveRecent = (student) => {
-    try {
-        const entry = {
-            name: student.name,
-            rollNo: String(student.rollNo),
-            batch: student.batch,
-            cohort: student.cohort || '',
-            ...(student.rollPending ? { rollPending: true, officialRollNo: student.officialRollNo } : {}),
-        };
-        const next = [entry, ...readRecent().filter((s) => s.rollNo !== entry.rollNo)].slice(0, MAX_RECENT);
-        localStorage.setItem(RECENT_KEY, JSON.stringify(next));
-        return next;
-    } catch {
-        return [];
-    }
-};
+import { readRecent, saveRecent, displayRoll } from '../utils/recent';
+import { copyText } from '../utils/copy';
 
 /** Highlights the matched part of a label. */
 const Highlight = ({ text, query }) => {
@@ -45,7 +18,7 @@ const Highlight = ({ text, query }) => {
     );
 };
 
-const Search = ({ onSelectStudent, selectedStudent }) => {
+const Search = ({ onSelectStudent, selectedStudent, onLoadingChange }) => {
     const [query, setQuery] = useState(selectedStudent?.name || '');
     const [searchIndex, setSearchIndex] = useState([]);
     const [isFocused, setIsFocused] = useState(false);
@@ -55,6 +28,12 @@ const Search = ({ onSelectStudent, selectedStudent }) => {
     const [notFound, setNotFound] = useState(false);
     const inputRef = useRef(null);
     const deferredQuery = useDeferredValue(query);
+
+    useEffect(() => {
+        const sync = () => setRecent(readRecent());
+        window.addEventListener('recent-change', sync);
+        return () => window.removeEventListener('recent-change', sync);
+    }, []);
 
     useEffect(() => {
         let active = true;
@@ -114,6 +93,7 @@ const Search = ({ onSelectStudent, selectedStudent }) => {
         setIsFocused(false);
         inputRef.current?.blur();
         setIsLoading(true);
+        onLoadingChange?.(true);
         setNotFound(false);
         try {
             const fullStudent = await getStudentByRoll(student.rollNo);
@@ -127,6 +107,7 @@ const Search = ({ onSelectStudent, selectedStudent }) => {
             setNotFound(true);
         } finally {
             setIsLoading(false);
+            onLoadingChange?.(false);
         }
     };
 
@@ -159,10 +140,10 @@ const Search = ({ onSelectStudent, selectedStudent }) => {
     };
 
     return (
-        <div className="relative w-full max-w-2xl z-30">
+        <div className="relative w-full max-w-2xl lg:max-w-3xl z-30">
             {/* One focus indicator: the box itself (the input's own outline is off) */}
             <div className="flex items-center bg-paper rounded-lg border border-rule transition-colors hover:border-ink-faint focus-within:border-ink! focus-within:ring-2 focus-within:ring-ink/15">
-                <div className="pl-4 pr-1 flex-shrink-0 text-ink-faint" aria-hidden="true">
+                <div className="pl-4 lg:pl-5 pr-1 flex-shrink-0 text-ink-faint" aria-hidden="true">
                     {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <SearchIcon className="w-5 h-5" />}
                 </div>
 
@@ -193,7 +174,7 @@ const Search = ({ onSelectStudent, selectedStudent }) => {
                     autoCapitalize="words"
                     spellCheck={false}
                     enterKeyHint="search"
-                    className="tnum w-full bg-transparent text-ink text-[18px] px-2.5 h-14 outline-none focus-visible:outline-none placeholder:text-ink-faint [&::-webkit-search-cancel-button]:hidden"
+                    className="tnum w-full bg-transparent text-ink text-[18px] lg:text-[21px] px-2.5 lg:px-3 h-14 lg:h-16 outline-none focus-visible:outline-none placeholder:text-ink-faint [&::-webkit-search-cancel-button]:hidden"
                 />
 
                 {query && (
@@ -209,7 +190,7 @@ const Search = ({ onSelectStudent, selectedStudent }) => {
             </div>
 
             {!query && !isFocused && !selectedStudent && (
-                <p className="mt-2 text-[14px] text-ink-faint">Tip: the last 3 or 4 digits of your roll number are enough.</p>
+                <p className="mt-2 text-[14px] lg:text-[16px] text-ink-faint">Tip: the last 3 or 4 digits of your roll number are enough.</p>
             )}
 
             {notFound && (
@@ -227,11 +208,19 @@ const Search = ({ onSelectStudent, selectedStudent }) => {
                 >
                     {showRecent && <p className="px-4 pt-3 pb-1 text-[13px] text-ink-faint">Recently opened</p>}
 
-                    {showEmpty && (
-                        <p className="px-4 py-5 text-[15px] text-ink-soft">
-                            {searchIndex.length === 0
-                                ? 'Loading students…'
-                                : <>No student found for “{query.trim()}”. Try part of your first name, or the last digits of your roll number.</>}
+                    {showEmpty && searchIndex.length === 0 && (
+                        <div className="px-4 py-2" role="status" aria-label="Loading students">
+                            {[0, 1, 2].map((i) => (
+                                <div key={i} className="py-2.5 border-t first:border-t-0 border-rule space-y-1.5">
+                                    <div className="skeleton h-4" style={{ width: `${55 - i * 10}%` }} />
+                                    <div className="skeleton h-3 w-32" />
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {showEmpty && searchIndex.length > 0 && (
+                        <p className="px-4 py-5 text-[15px] lg:text-[17px] text-ink-soft">
+                            No student found for “{query.trim()}”. Try part of your first name, or the last digits of your roll number.
                         </p>
                     )}
 
@@ -247,19 +236,30 @@ const Search = ({ onSelectStudent, selectedStudent }) => {
                                 onMouseEnter={() => setSelectedIndex(idx)}
                                 className={`px-4 py-3 min-h-[56px] cursor-pointer flex items-center justify-between gap-4 border-t first:border-t-0 border-rule ${isSelected ? 'bg-desk' : ''}`}
                             >
-                                <div className="min-w-0">
-                                    <div className="text-[16px] font-bold text-ink truncate">
+                                <div className="min-w-0 flex-1">
+                                    <div className="text-[16px] lg:text-[18px] font-bold text-ink truncate">
                                         <Highlight text={student.name} query={showRecent ? '' : query} />
                                     </div>
-                                    <div className="tnum text-[14px] text-ink-soft truncate">
-                                        <Highlight text={student.officialRollNo || student.rollNo} query={showRecent ? '' : query} />
+                                    <div className="tnum text-[14px] lg:text-[16px] text-ink-soft truncate">
+                                        <Highlight text={displayRoll(student)} query={showRecent ? '' : query} />
+                                        <span className="ml-2 text-ink-faint">{student.batch}</span>
                                         {student.rollPending && <span className="ml-2 text-ink-faint">roll no. being verified</span>}
                                     </div>
                                 </div>
-                                <div className="flex-shrink-0 text-right text-[13px] text-ink-faint tnum">
-                                    {student.batch}
-                                    {student.cohort && <div className="hidden sm:block">{student.cohort}</div>}
-                                </div>
+                                {/* Copy the roll number without opening the schedule */}
+                                <button
+                                    type="button"
+                                    tabIndex={-1}
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        copyText(displayRoll(student), `Roll number ${displayRoll(student)} copied`);
+                                    }}
+                                    className="flex-shrink-0 inline-flex items-center gap-1.5 h-10 px-3 rounded-md border border-rule bg-paper text-[14px] font-bold text-ink-soft hover:text-ink hover:border-ink-faint active:scale-[0.97] transition"
+                                    aria-label={`Copy roll number of ${student.name}`}
+                                >
+                                    <Copy size={15} /> Copy
+                                </button>
                             </div>
                         );
                     })}

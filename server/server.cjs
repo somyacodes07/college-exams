@@ -53,7 +53,8 @@ const getClientIp = (req) => {
 
 // General API rate limiter
 const rateLimitWindowMs = 15 * 60 * 1000; // 15 minutes
-const rateLimitMaxRequests = 150;
+// Generous: students on one college Wi-Fi share a single IP address
+const rateLimitMaxRequests = 900;
 const ipRequestCounts = new Map();
 
 setInterval(() => {
@@ -245,10 +246,13 @@ app.get('/api/health', async (req, res) => {
 // --- ATKT / re-exam lookup (read live from the private sheet, no DB needed) ---
 const atkt = require('./utils/atkt.cjs');
 
-// Stricter limit so roll numbers can't be scanned in bulk
-const atktLookups = new Map();
+// Limit how many DIFFERENT roll numbers one device can look up, so the list
+// can't be scanned in bulk. Re-checking the same students (the page refreshes
+// every minute, on tab focus, etc.) is never blocked.
+const atktLookups = new Map(); // ip -> { rolls: Set, resetTime }
 const ATKT_WINDOW_MS = 10 * 60 * 1000;
-const ATKT_MAX_LOOKUPS = 40;
+// Sized for a classroom behind one IP, still far below the ~600 students in total
+const ATKT_MAX_DISTINCT_ROLLS = 150;
 setInterval(() => {
   const now = Date.now();
   for (const [ip, d] of atktLookups.entries()) if (now > d.resetTime) atktLookups.delete(ip);
@@ -256,15 +260,19 @@ setInterval(() => {
 
 const atktRateLimiter = (req, res, next) => {
   const ip = getClientIp(req);
+  const roll = String(req.params.rollNo || '');
   const now = Date.now();
-  const d = atktLookups.get(ip);
+  let d = atktLookups.get(ip);
   if (!d || now > d.resetTime) {
-    atktLookups.set(ip, { count: 1, resetTime: now + ATKT_WINDOW_MS });
-    return next();
+    d = { rolls: new Set(), resetTime: now + ATKT_WINDOW_MS };
+    atktLookups.set(ip, d);
   }
-  if (++d.count > ATKT_MAX_LOOKUPS) {
-    return res.status(429).json({ error: 'Too Many Requests', details: 'Please try again in a few minutes.' });
+  if (d.rolls.has(roll)) return next();
+  if (d.rolls.size >= ATKT_MAX_DISTINCT_ROLLS) {
+    res.setHeader('Retry-After', String(Math.ceil((d.resetTime - now) / 1000)));
+    return res.status(429).json({ error: 'Too Many Requests', details: 'Too many different students looked up. Try again in a few minutes.' });
   }
+  d.rolls.add(roll);
   next();
 };
 

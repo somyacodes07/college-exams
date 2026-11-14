@@ -13,10 +13,11 @@
   --paper: #ffffff;
   --ink: #1c2a47;
   --ink-soft: #55607a;
-  --ink-faint: #8a93a6;
-  --rule: #d6dbe3;
+  --ink-faint: #5f687c;
+  --rule: #d3d9e2;
   --mark: #f7e463;
   --mark-ink: #1c2a47;
+  --mark-tint: #fdf7cf;
   --stamp: #b42318;
   /* Highlighter set: each exam type has a pen colour (bar/text) and a tint */
   --theory: #2273b5;
@@ -33,10 +34,11 @@
   --paper: #1f283c;
   --ink: #eef1f6;
   --ink-soft: #aab3c4;
-  --ink-faint: #7b869c;
+  --ink-faint: #8e99ae;
   --rule: #33405a;
   --mark: #e8d44a;
   --mark-ink: #1c2a47;
+  --mark-tint: #3a3826;
   --stamp: #f2796a;
   --theory: #7bbcf2;
   --theory-tint: #1e3550;
@@ -57,6 +59,7 @@
   --color-rule: var(--rule);
   --color-mark: var(--mark);
   --color-mark-ink: var(--mark-ink);
+  --color-mark-tint: var(--mark-tint);
   --color-stamp: var(--stamp);
   --color-theory: var(--theory);
   --color-theory-tint: var(--theory-tint);
@@ -81,8 +84,14 @@ body {
   font-family: var(--font-sans);
   font-size: 16px;
   line-height: 1.5;
+  text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Desktop has room: everything reads one step larger */
+@media (min-width: 1024px) {
+  body { font-size: 18px; }
 }
 
 /* Times, dates and roll numbers line up in columns */
@@ -116,6 +125,54 @@ body {
 @keyframes highlight-swipe {
   from { background-size: 0% 100%; }
   to { background-size: 100% 100%; }
+}
+
+/* Skeleton: the shape of the timetable while it loads */
+.skeleton {
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--desk) 0%, var(--rule) 45%, var(--desk) 90%);
+  background-size: 220% 100%;
+  animation: skeleton-sweep 1.3s ease-in-out infinite;
+}
+@keyframes skeleton-sweep {
+  from { background-position: 100% 0; }
+  to { background-position: -120% 0; }
+}
+
+/* The schedule arrives as one short, staggered reveal (header, then sheets) */
+.reveal {
+  animation: reveal-in 320ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes reveal-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Quick crossfade when switching tabs */
+.swap {
+  animation: swap-in 180ms ease-out both;
+}
+@keyframes swap-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Confirmation pop on copy */
+.pop {
+  animation: pop 260ms cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+@keyframes pop {
+  0% { transform: scale(0.94); }
+  100% { transform: scale(1); }
+}
+
+/* Toast at the bottom of the screen */
+.toast {
+  animation: toast-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
