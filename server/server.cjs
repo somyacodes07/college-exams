@@ -224,6 +224,10 @@ const connectToDatabase = async () => {
 connectToDatabase().catch(() => {});
 
 const connectDB = async (req, res, next) => {
+  // Password check and the local sync file do not use Mongo.
+  if (req.path === '/api/students/verify-password' || req.path === '/api/students/sync-config') {
+    return next();
+  }
   try {
     await connectToDatabase();
     next();

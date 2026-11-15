@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { Github, Instagram, Sun, Moon, Database } from 'lucide-react';
 import { Analytics } from '@vercel/analytics/react';
+import GradientASCII from './components/GradientASCII';
 import Search from './components/Search';
 import ScheduleCard from './components/ScheduleCard';
 import ScheduleSkeleton from './components/ScheduleSkeleton';
@@ -50,7 +51,7 @@ function App() {
   useEffect(() => {
     const root = document.documentElement;
     root.classList.toggle('dark', theme === 'dark');
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#1f283c' : '#ffffff');
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#0a0a0a' : '#ffffff');
     try { localStorage.setItem('theme', theme); } catch { /* ignore */ }
   }, [theme]);
 
@@ -128,12 +129,25 @@ function App() {
 
   const toggleTheme = () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
 
-  const iconBtn = 'w-10 h-10 inline-flex items-center justify-center rounded-md text-ink-soft hover:text-ink hover:bg-desk transition-colors';
+  const iconBtn = 'inline-flex size-9 items-center justify-center rounded-md text-ink-soft transition duration-200 hover:bg-muted hover:text-ink active:scale-95';
+  const home = !selectedStudent;
 
   return (
-    <div className="min-h-screen min-h-dvh bg-desk text-ink">
+    <div className="relative flex min-h-screen min-h-dvh flex-col bg-desk text-ink">
+      {theme === 'dark' && (
+        <div className="pointer-events-none fixed inset-0 z-0 print:hidden" aria-hidden="true">
+          <GradientASCII
+            colors={['#1e3fd8', '#f6f8ff', '#a5d8ff', '#38bdf8']}
+            shape="horizon"
+            characters=" =+xX0S8#@"
+            cellSize={18}
+            density={0.8}
+            style={{ width: '100%', height: '100%' }}
+          />
+        </div>
+      )}
       <header
-        className="sticky top-0 z-40 bg-paper/95 border-b border-rule print:hidden"
+        className="sticky top-0 z-40 border-b border-rule bg-desk/90 backdrop-blur-md print:hidden"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         <div className="mx-auto max-w-6xl h-14 lg:h-16 px-4 lg:px-6 flex items-center justify-between gap-3">
@@ -143,7 +157,7 @@ function App() {
             aria-label="Exam Scheduler home"
           >
             <img src="/logo.svg" alt="" width="28" height="28" className="w-7 h-7 lg:w-8 lg:h-8 rounded-[7px] flex-shrink-0 dark:ring-1 dark:ring-rule" />
-            <span className="font-bold text-[17px] lg:text-[19px] tracking-[-0.01em] truncate">Exam Scheduler</span>
+            <span className="font-semibold text-sm tracking-tight truncate">Exam Scheduler</span>
           </button>
 
           <div className="flex items-center gap-1">
@@ -161,42 +175,43 @@ function App() {
           </div>
         </div>
         {dbStatus === 'offline' && (
-          <p className="border-t border-rule bg-desk px-4 py-1.5 text-center text-[13px] text-ink-soft">
+          <p className="border-t border-rule bg-muted px-4 py-1.5 text-center text-sm text-ink-soft">
             Can't reach the server right now. Search will work again once you're back online.
           </p>
         )}
       </header>
 
       <main
-        className="mx-auto max-w-6xl px-4 lg:px-6 pt-8 sm:pt-14 lg:pt-16"
-        style={{ paddingBottom: 'max(2.5rem, env(safe-area-inset-bottom))' }}
+        className={home
+          ? 'relative z-10 flex w-full flex-1 flex-col items-center justify-center px-4 py-12 text-center'
+          : 'relative z-10 mx-auto w-full max-w-6xl flex-1 px-4 pt-8 sm:pt-14 lg:px-6 lg:pt-16'}
       >
-        {!selectedStudent && (
-          <div className="reveal max-w-3xl">
-            <h1 className="text-[2.25rem] sm:text-[3.25rem] lg:text-[4.25rem] font-extrabold leading-[1.03] tracking-[-0.03em]">
+        {home && (
+          <div className="rise flex w-full max-w-xl flex-col items-center">
+            <h1 className="text-4xl font-medium tracking-tight leading-[1.05] sm:text-5xl">
               Your exam date sheet
             </h1>
-            <p className="mt-3 lg:mt-4 text-[17px] lg:text-[21px] text-ink-soft max-w-[36rem]">
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-ink-soft sm:text-base">
               Theory papers, practical vivas and ATKT re‑exams, with time and room. Search your name or roll number.
             </p>
           </div>
         )}
 
-        <div className={`print:hidden ${selectedStudent ? '' : 'mt-6 sm:mt-8'}`}>
+        <div className={`print:hidden relative z-30 w-full ${home ? 'rise d2 mt-8 max-w-xl' : ''}`}>
           <Search key={syncVersion} onSelectStudent={handleSelectStudent} selectedStudent={selectedStudent} onLoadingChange={setOpening} />
         </div>
 
-        {!selectedStudent && (
-          <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-[14px] lg:text-[16px] text-ink-soft" aria-label="Colour key">
-            <li className="inline-flex items-center gap-2"><span className="w-3 h-3 rounded-[3px] bg-theory" aria-hidden="true" />Theory</li>
-            <li className="inline-flex items-center gap-2"><span className="w-3 h-3 rounded-[3px] bg-practical" aria-hidden="true" />Practical</li>
-            <li className="inline-flex items-center gap-2"><span className="w-3 h-3 rounded-[3px] bg-reexam" aria-hidden="true" />Re-exam (ATKT)</li>
-            <li className="inline-flex items-center gap-2"><span className="w-5 h-3 rounded-[2px] bg-mark" aria-hidden="true" />Your next exam</li>
+        {home && (
+          <ul className="rise d3 mt-5 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-ink-soft" aria-label="Colour key">
+            <li className="inline-flex items-center gap-2"><span className="size-2.5 rounded-full bg-theory" aria-hidden="true" />Theory</li>
+            <li className="inline-flex items-center gap-2"><span className="size-2.5 rounded-full bg-practical" aria-hidden="true" />Practical</li>
+            <li className="inline-flex items-center gap-2"><span className="size-2.5 rounded-full bg-reexam" aria-hidden="true" />Re-exam (ATKT)</li>
+            <li className="inline-flex items-center gap-2"><span className="size-2.5 rounded-full bg-mark" aria-hidden="true" />Your next exam</li>
           </ul>
         )}
 
-        {!selectedStudent && batches.length > 0 && (
-          <p className="mt-4 text-[14px] lg:text-[16px] text-ink-faint tnum max-w-2xl">
+        {home && batches.length > 0 && (
+          <p className="rise d4 mt-4 max-w-xl text-sm text-ink-faint tnum">
             {studentCount > 0 ? `${studentCount.toLocaleString('en-IN')} students` : 'Students'} in batches{' '}
             {batches.slice().sort().map((b, i, all) => (
               <span key={b} className="whitespace-nowrap">{b}{i < all.length - 1 ? ', ' : '.'}</span>
@@ -204,33 +219,36 @@ function App() {
           </p>
         )}
 
-        <div id="schedule" className="mt-6 sm:mt-8 scroll-mt-20">
+        <div id="schedule" className={home ? 'mt-6 w-full max-w-xl' : 'mt-6 scroll-mt-20 sm:mt-8'}>
           {opening ? (
             <ScheduleSkeleton />
           ) : (
             <ScheduleCard key={selectedStudent ? selectedStudent.rollNo : 'empty'} student={selectedStudent} />
           )}
-          {!selectedStudent && !opening && <QuickCopy onOpen={openRecent} />}
+          {home && !opening && <QuickCopy onOpen={openRecent} />}
         </div>
-
-
-        <footer className="print:hidden mt-10 pt-5 border-t border-rule flex flex-wrap items-center justify-between gap-3 text-[14px] text-ink-soft">
-          <span>
-            Made by{' '}
-            <a href="https://somyacodes.in" target="_blank" rel="noopener noreferrer" className="font-semibold text-ink underline decoration-rule underline-offset-4 hover:decoration-ink">
-              Somyajeet Singh
-            </a>
-          </span>
-          <div className="flex items-center gap-1">
-            <a href="https://github.com/somyacodes07" target="_blank" rel="noopener noreferrer" aria-label="GitHub" className={iconBtn}>
-              <Github size={17} />
-            </a>
-            <a href="https://instagram.com/somyajeet.op" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className={iconBtn}>
-              <Instagram size={17} />
-            </a>
-          </div>
-        </footer>
       </main>
+
+      <footer
+        className="rise d5 print:hidden relative z-10 mt-auto flex flex-wrap items-center justify-center gap-2 border-t border-rule/40 px-4 py-4 text-xs text-ink-soft"
+        style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+      >
+        <span>
+          Made by{' '}
+          <a href="https://somyacodes.in" target="_blank" rel="noopener noreferrer" className="font-semibold text-ink underline underline-offset-4 transition-colors hover:text-ink">
+            Somyajeet Singh
+          </a>
+        </span>
+        <span aria-hidden="true" className="text-rule">·</span>
+        <div className="flex items-center">
+          <a href="https://github.com/somyacodes07" target="_blank" rel="noopener noreferrer" aria-label="GitHub" className={iconBtn}>
+            <Github size={17} />
+          </a>
+          <a href="https://instagram.com/somyajeet.op" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className={iconBtn}>
+            <Instagram size={17} />
+          </a>
+        </div>
+      </footer>
 
       {isAdminOpen && (
         <Suspense fallback={null}>

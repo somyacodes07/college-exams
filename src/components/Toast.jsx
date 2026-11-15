@@ -23,7 +23,7 @@ const Toast = () => {
       {item && (
         <div
           key={item.id}
-          className="toast fixed left-1/2 z-50 max-w-[calc(100vw-2rem)] px-4 py-3 rounded-lg bg-ink text-paper text-[15px] lg:text-[16px] font-bold shadow-[0_12px_28px_-10px_rgba(28,42,71,0.5)]"
+          className="toast fixed left-1/2 z-50 max-w-[calc(100vw-2rem)] rounded-xl border border-rule bg-paper px-3 py-3 text-sm text-ink shadow-lg"
           style={{ bottom: 'max(1.25rem, env(safe-area-inset-bottom))', transform: 'translateX(-50%)' }}
         >
           {item.message}

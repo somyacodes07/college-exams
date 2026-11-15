@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check } from 'lucide-react';
 import { parseExamDateTime, isExamCompleted, relativeDayLabel, examDateParts, displayTime } from '../utils/dateUtils';
-import { KIND, ROW_GRID } from './kind';
+import { ROW_GRID } from './kind';
 import PrintButton from './PrintButton';
 
 const KIND_ORDER = ['Theory', 'Project Eval', 'Practical', 'Viva'];
@@ -70,7 +70,7 @@ const Row = ({ exam, kind, isNext, showDate, now }) => {
           </>
         )}
       </div>
-      <div className={`min-w-0 border-l-[3px] pl-3 lg:pl-4 py-0.5 pb-2 ${KIND.reexam.bar} ${completed ? 'opacity-55' : ''}`}>
+      <div className={`min-w-0 chip chip-reexam${isNext ? ' is-next' : ''}${completed ? ' opacity-55' : ''}`}>
         <div className="flex items-start justify-between gap-3">
           <p className={`text-[16px] lg:text-[19px] font-bold leading-snug break-words ${completed ? 'text-ink-faint' : 'text-ink'}`}>
             {isNext ? <span className="highlight">{exam.subject}</span> : exam.subject}
@@ -98,7 +98,7 @@ const Row = ({ exam, kind, isNext, showDate, now }) => {
 };
 
 const tabClass = (active) =>
-  `-mb-px h-11 lg:h-12 px-3 sm:px-4 text-[15px] lg:text-[16px] font-bold whitespace-nowrap border-b-[3px] transition-colors ${active ? `${KIND.reexam.rule} text-ink` : 'border-transparent text-ink-faint hover:text-ink-soft'}`;
+  `pb-2 px-3 sm:px-4 text-sm whitespace-nowrap ${active ? 'font-medium text-ink' : 'text-ink-faint hover:text-ink'}`;
 
 /** ATKT re-exams, split into the sheet's tabs (semester, then Theory / Project Eval). */
 const AtktSection = ({ exams, nextExam, now: nowProp }) => {
@@ -123,11 +123,11 @@ const AtktSection = ({ exams, nextExam, now: nowProp }) => {
   const upcoming = exams.filter((e) => !isExamCompleted(e, now)).length;
 
   return (
-    <section aria-label="ATKT re-exam schedule" className="reveal bg-paper border border-rule rounded-xl px-4 sm:px-5 lg:px-6 pt-4 lg:pt-5 pb-2 print:border-0 print:px-0" style={{ animationDelay: '60ms' }}>
-      <div className={`flex items-center justify-between gap-3 pb-3 border-b-[3px] ${KIND.reexam.rule}`}>
+    <section aria-label="ATKT re-exam schedule" className="reveal rounded-2xl border border-rule bg-paper text-ink shadow-[0_1px_0_rgba(22,32,51,0.04)] px-4 sm:px-5 lg:px-6 pt-4 lg:pt-5 pb-2 print:border-0 print:px-0" style={{ animationDelay: '60ms' }}>
+      <div className="flex items-center justify-between gap-3 pb-3 border-b border-rule">
         <div className="flex items-center gap-2.5">
-          <h3 className="text-[20px] lg:text-[24px] font-extrabold tracking-[-0.01em]">Re-exams</h3>
-          <span className="text-[12px] font-bold text-stamp border-[1.5px] border-stamp rounded-[3px] px-1.5 leading-[18px]">ATKT</span>
+          <h3 className="font-mono text-[11px] font-medium uppercase tracking-[0.22em] text-ink-soft">Re-exams</h3>
+          <span className="rounded border border-stamp px-1.5 text-[11px] font-medium text-stamp">ATKT</span>
         </div>
         <span className="text-[14px] lg:text-[15px] text-ink-faint tnum">
           {upcoming > 0 ? `${upcoming} of ${exams.length} to go` : 'All done'}
@@ -153,7 +153,7 @@ const AtktSection = ({ exams, nextExam, now: nowProp }) => {
                 onClick={() => setPicked({ semester: g.semester, kind: kindGroup.kind })}
                 className={tabClass(g.semester === semGroup.semester)}
               >
-                {g.semester}<span className={`ml-1.5 inline-block min-w-[1.5rem] px-1.5 rounded-full text-[12px] lg:text-[13px] leading-[20px] font-bold tnum text-center ${g.semester === semGroup.semester ? 'bg-reexam-tint text-ink' : 'bg-desk text-ink-faint'}`}>{count}</span>
+                {g.semester}<span className={`ml-1.5 inline-block min-w-[1.5rem] rounded px-1.5 py-0.5 text-[11px] font-medium tnum text-center ${g.semester === semGroup.semester ? 'bg-reexam-tint text-ink' : 'bg-muted text-ink-faint'}`}>{count}</span>
               </button>
             );
           })}
@@ -165,7 +165,7 @@ const AtktSection = ({ exams, nextExam, now: nowProp }) => {
       </div>
 
       {semGroup.kinds.length > 1 ? (
-        <div className="mt-3 inline-flex rounded-md border border-rule p-0.5" role="tablist" aria-label="Exam type">
+        <div className="mt-3 inline-flex rounded-lg bg-muted p-0.5" role="tablist" aria-label="Exam type">
           {semGroup.kinds.map((k) => {
             const active = k.kind === kindGroup.kind;
             return (
@@ -174,9 +174,9 @@ const AtktSection = ({ exams, nextExam, now: nowProp }) => {
                 role="tab"
                 aria-selected={active}
                 onClick={() => setPicked({ semester: semGroup.semester, kind: k.kind })}
-                className={`h-9 lg:h-10 px-3 lg:px-4 rounded-[5px] text-[14px] lg:text-[16px] font-bold whitespace-nowrap transition-colors ${active ? 'bg-ink text-paper' : 'text-ink-soft hover:text-ink'}`}
+                className={`h-9 lg:h-10 px-3 lg:px-4 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${active ? 'bg-paper text-ink' : 'text-ink-soft hover:text-ink'}`}
               >
-                {k.kind}<span className={`ml-1.5 inline-block min-w-[1.5rem] px-1.5 rounded-full text-[12px] leading-[20px] font-bold tnum text-center ${active ? 'bg-paper/20 text-paper' : 'bg-desk text-ink-faint'}`}>{k.items.length}</span>
+                {k.kind}<span className={`ml-1.5 inline-block min-w-[1.5rem] rounded px-1.5 py-0.5 text-[11px] font-medium tnum text-center ${active ? 'bg-muted text-ink' : 'bg-paper text-ink-faint'}`}>{k.items.length}</span>
               </button>
             );
           })}

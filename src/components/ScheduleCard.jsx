@@ -61,17 +61,17 @@ const TimetableRow = ({ exam, kind, isNext, showDate, now }) => {
 
     return (
         <li className={`${ROW_GRID} ${showDate ? 'pt-3 lg:pt-4 border-t border-rule first:border-t-0' : 'pt-1'} pb-1`}>
-            <div className="tnum leading-tight pt-0.5">
+            <div className="tnum pt-0.5 font-mono text-xs leading-tight text-ink-soft">
                 {showDate && (
                     <>
-                        <div className={`text-[13px] lg:text-[15px] ${isToday ? 'font-bold text-ink' : 'text-ink-faint'}`}>{isToday ? 'Today' : weekday}</div>
-                        <div className={`text-[16px] lg:text-[19px] font-bold ${completed ? 'text-ink-faint' : 'text-ink'}`}>{day}</div>
+                        <div className={isToday ? 'font-semibold text-ink' : undefined}>{isToday ? 'Today' : weekday}</div>
+                        <div className={completed ? 'text-ink-faint' : isToday ? 'font-semibold text-ink' : undefined}>{day}</div>
                     </>
                 )}
             </div>
-            <div className={`min-w-0 border-l-[3px] pl-3 lg:pl-4 py-0.5 pb-2 ${KIND[kind].bar} ${completed ? 'opacity-55' : ''}`}>
+            <div className={`chip min-w-0 ${kind === 'practical' ? 'chip-practical' : 'chip-theory'} ${isNext ? 'is-next' : ''} ${completed ? 'opacity-55' : ''}`}>
                 <div className="flex items-start justify-between gap-3">
-                    <p className={`text-[16px] lg:text-[19px] font-bold leading-snug break-words ${completed ? 'text-ink-soft' : 'text-ink'}`}>
+                    <p className={`text-sm font-medium tracking-tight leading-snug break-words ${completed ? 'text-ink-soft' : 'text-ink'}`}>
                         {isNext ? <span className="highlight">{exam.subject}</span> : exam.subject}
                     </p>
                     {completed && (
@@ -99,9 +99,9 @@ const TimetableRow = ({ exam, kind, isNext, showDate, now }) => {
 const dayKeyOf = (exam) => dateParts(exam).parsed?.dayKey || `raw-${exam.date}`;
 
 const Sheet = ({ title, kind, note, exams, nextExam, emptyText, now, className = '', style }) => (
-    <section style={style} className={`reveal bg-paper border border-rule rounded-xl px-4 sm:px-5 lg:px-6 pt-4 lg:pt-5 pb-2 print:border-0 print:px-0 ${className}`}>
-        <div className={`flex items-baseline justify-between gap-3 pb-3 border-b-[3px] ${KIND[kind].rule}`}>
-            <h3 className="text-[20px] lg:text-[24px] font-extrabold tracking-[-0.01em]">{title}</h3>
+    <section style={style} className={`reveal rounded-2xl border border-rule bg-paper text-ink shadow-[0_1px_0_rgba(22,32,51,0.04)] px-4 sm:px-5 lg:px-6 pt-4 lg:pt-5 pb-2 print:border-0 print:px-0 ${className}`}>
+        <div className="flex items-baseline justify-between gap-3 border-b border-rule pb-3">
+            <h3 className="font-mono text-[11px] font-medium uppercase tracking-[0.22em] text-ink-soft">{title}</h3>
             <span className="text-[14px] lg:text-[15px] text-ink-faint tnum">{note}</span>
         </div>
         {exams.length === 0 ? (
@@ -124,7 +124,7 @@ const TABS = [
     { id: 'practical', label: 'Practical', kind: 'practical' },
 ];
 
-const badge = 'ml-1.5 inline-block min-w-[1.5rem] px-1.5 rounded-full text-[12px] lg:text-[13px] leading-[20px] font-bold tnum text-center';
+const badge = 'ml-1.5 tnum rounded px-1.5 py-0.5 text-[11px] font-medium';
 
 const ScheduleCard = ({ student }) => {
     const now = useNow();
@@ -222,17 +222,17 @@ const ScheduleCard = ({ student }) => {
     return (
         <div className="w-full space-y-4 sm:space-y-5 lg:space-y-6">
             {/* Admit-card style header */}
-            <section className="reveal bg-paper border border-rule rounded-xl p-4 sm:p-6 lg:p-8 print:border-0 print:p-0" aria-label={`Schedule for ${student.name}`}>
+            <section className="reveal rounded-2xl border border-rule bg-paper p-4 text-ink shadow-[0_1px_0_rgba(22,32,51,0.04)] sm:p-6 lg:p-8 print:border-0 print:p-0" aria-label={`Schedule for ${student.name}`}>
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
-                        <h2 className="text-[28px] sm:text-[40px] lg:text-[52px] font-extrabold leading-[1.05] tracking-[-0.025em] break-words">
+                        <h2 className="break-words text-2xl font-medium tracking-tight sm:text-3xl">
                             {student.name}
                         </h2>
                         <div className="mt-3 lg:mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
                             {/* The roll number is one big copy button: tap anywhere on it */}
                             <button
                                 onClick={copyRoll}
-                                className={`group inline-flex items-center gap-3 rounded-lg border px-3 lg:px-4 h-12 lg:h-14 transition-colors ${rollCopied ? 'pop border-practical bg-practical-tint' : 'border-rule hover:border-ink-faint bg-desk/60'}`}
+                                className={`group inline-flex h-12 items-center gap-3 rounded-lg border px-3 transition-colors lg:h-14 lg:px-4 ${rollCopied ? 'pop border-practical bg-practical-tint' : 'border-rule bg-muted'}`}
                                 aria-label={`Copy roll number ${roll}`}
                                 title="Copy roll number (C)"
                             >
@@ -257,13 +257,13 @@ const ScheduleCard = ({ student }) => {
                     <div className="flex items-center gap-2 flex-shrink-0 print:hidden">
                         <button
                             onClick={handleExport}
-                            className="inline-flex items-center gap-2 h-11 lg:h-12 px-4 lg:px-5 rounded-md bg-ink text-paper font-bold text-[15px] lg:text-[16px] hover:opacity-90 active:opacity-80 transition-opacity"
+                            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-ink px-4 text-sm font-semibold text-paper hover:opacity-90"
                         >
                             {calendarDone ? <><Check size={18} /> File downloaded</> : <><CalendarPlus size={18} /> Add to calendar</>}
                         </button>
                         <button
                             onClick={handleShare}
-                            className="h-11 w-11 lg:h-12 lg:w-12 inline-flex items-center justify-center rounded-md border border-rule text-ink-soft hover:text-ink hover:border-ink-faint transition-colors"
+                            className="inline-flex size-9 items-center justify-center rounded-md border border-rule text-ink-soft hover:bg-muted hover:text-ink"
                             aria-label="Share schedule link"
                             title="Share schedule link"
                         >
@@ -273,7 +273,7 @@ const ScheduleCard = ({ student }) => {
                 </div>
 
                 {nextLine && (
-                    <p className={`mt-4 lg:mt-5 rounded-lg px-3.5 lg:px-4 py-2.5 lg:py-3 text-[16px] lg:text-[19px] leading-relaxed ${next ? 'bg-mark-tint' : 'bg-desk'}`}>{nextLine}</p>
+                    <p className={`mt-4 rounded-lg px-3.5 py-2.5 text-sm leading-relaxed lg:mt-5 lg:px-4 lg:py-3 ${next ? 'bg-mark-tint' : 'bg-muted'}`}>{nextLine}</p>
                 )}
             </section>
 
@@ -298,17 +298,16 @@ const ScheduleCard = ({ student }) => {
                             {TABS.map((t) => {
                                 const count = t.id === 'all' ? allRegular.length : t.id === 'theory' ? theoryExams.length : practicalExams.length;
                                 const active = activeTab === t.id;
-                                const activeBorder = t.kind ? KIND[t.kind].rule : 'border-ink';
-                                const activeBadge = t.kind ? `${KIND[t.kind].tint} text-ink` : 'bg-desk text-ink';
+                                const activeBadge = t.kind ? `${KIND[t.kind].tint} text-ink` : 'bg-muted text-ink';
                                 return (
                                     <button
                                         key={t.id}
                                         role="tab"
                                         aria-selected={active}
                                         onClick={() => setActiveTab(t.id)}
-                                        className={`-mb-px h-11 px-2.5 sm:px-4 text-[15px] font-bold whitespace-nowrap border-b-[3px] transition-colors ${active ? `${activeBorder} text-ink` : 'border-transparent text-ink-faint hover:text-ink-soft'}`}
+                                        className={`whitespace-nowrap pb-2 text-sm ${active ? 'font-medium text-ink' : 'text-ink-faint hover:text-ink'}`}
                                     >
-                                        {t.label}<span className={`${badge} ${active ? activeBadge : 'bg-desk text-ink-faint'}`}>{count}</span>
+                                        {t.label}<span className={`${badge} ${active ? activeBadge : 'bg-muted text-ink-faint'}`}>{count}</span>
                                     </button>
                                 );
                             })}
@@ -367,7 +366,7 @@ const ScheduleCard = ({ student }) => {
                     <ChevronDown size={16} className={`transition-transform ${showHelp ? 'rotate-180' : ''}`} />
                 </button>
                 {showHelp && (
-                    <div className="swap mt-3 bg-paper border border-rule rounded-xl p-4 sm:p-5 max-w-2xl">
+                    <div className="swap mt-3 max-w-2xl rounded-2xl border border-rule bg-paper p-4 text-ink shadow-[0_1px_0_rgba(22,32,51,0.04)] sm:p-5">
                         <ol className="list-decimal pl-5 space-y-1 text-[15px] lg:text-[17px] text-ink-soft">
                             <li>Tap <strong className="text-ink">Add to calendar</strong> above.</li>
                             <li>Open the downloaded file.</li>

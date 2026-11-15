@@ -9,7 +9,7 @@ export const SkeletonRows = ({ rows = 3 }) => (
           <div className="skeleton h-3 w-8" />
           <div className="skeleton h-4 w-14" />
         </div>
-        <div className="border-l-[3px] border-rule pl-3 space-y-2">
+        <div className="rounded-lg bg-muted px-2.5 py-2 space-y-2">
           <div className="skeleton h-4 lg:h-5" style={{ width: `${62 - i * 9}%` }} />
           <div className="skeleton h-3.5 w-36" />
         </div>
@@ -20,7 +20,7 @@ export const SkeletonRows = ({ rows = 3 }) => (
 
 /** A sheet (Theory / Practical / Re-exams) while its rows load. */
 export const SheetSkeleton = ({ rows = 3, className = '' }) => (
-  <section className={`bg-paper border border-rule rounded-xl px-4 sm:px-5 lg:px-6 pt-4 pb-2 ${className}`} aria-hidden="true">
+  <section className={`rounded-2xl border border-rule bg-paper text-ink shadow-[0_1px_0_rgba(22,32,51,0.04)] px-4 sm:px-5 lg:px-6 pt-4 pb-2 ${className}`} aria-hidden="true">
     <div className="flex items-center justify-between pb-3 border-b-[3px] border-rule">
       <div className="skeleton h-6 w-28" />
       <div className="skeleton h-4 w-16" />
@@ -32,7 +32,7 @@ export const SheetSkeleton = ({ rows = 3, className = '' }) => (
 /** Whole schedule (admit card + both sheets) while a student is being opened. */
 const ScheduleSkeleton = () => (
   <div className="w-full space-y-4 sm:space-y-5" role="status" aria-label="Loading schedule">
-    <section className="bg-paper border border-rule rounded-xl p-4 sm:p-6 lg:p-8" aria-hidden="true">
+    <section className="rounded-2xl border border-rule bg-paper text-ink shadow-[0_1px_0_rgba(22,32,51,0.04)] p-4 sm:p-6 lg:p-8" aria-hidden="true">
       <div className="skeleton h-8 sm:h-10 lg:h-12 w-3/5 max-w-md" />
       <div className="mt-4 flex flex-wrap gap-3">
         <div className="skeleton h-12 w-56" />

@@ -4,8 +4,8 @@
     "description": "Find your theory and practical exam schedule.",
     "start_url": "/",
     "display": "standalone",
-    "background_color": "#e9ecf0",
-    "theme_color": "#1c2a47",
+    "background_color": "#ffffff",
+    "theme_color": "#ffffff",
     "icons": [
         {
             "src": "/logo.svg",

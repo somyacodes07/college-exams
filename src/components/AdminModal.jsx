@@ -317,10 +317,10 @@ const AdminModal = ({ isOpen, onClose, onSyncSuccess }) => {
             handleFileChange(type, e.dataTransfer.files[0]);
           }
         }}
-        className={`flex items-center justify-between p-3.5 sm:p-4 rounded-lg border cursor-pointer transition-all ${ isSelected ? 'border-practical bg-practical-tint' : 'border-rule hover:border-rule bg-desk' }`}
+        className={`flex items-center justify-between p-3.5 sm:p-4 rounded-lg border cursor-pointer transition-all ${ isSelected ? 'border-practical bg-practical-tint text-practical' : 'border-rule hover:border-rule bg-muted' }`}
       >
         <div className="flex items-center gap-3 min-w-0 pr-2">
-          <div className={`p-2 rounded-xl flex-shrink-0 ${isSelected ? 'bg-practical-tint text-practical' : 'bg-desk text-ink-soft'}`}>
+          <div className={`p-2 rounded-xl flex-shrink-0 ${isSelected ? 'bg-practical-tint text-practical' : 'bg-muted text-ink-soft'}`}>
             {isSelected ? <CheckCircle size={18} /> : <UploadCloud size={18} />}
           </div>
           <div className="text-left min-w-0">
@@ -351,7 +351,7 @@ const AdminModal = ({ isOpen, onClose, onSyncSuccess }) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={handleClose}
-            className="absolute inset-0 bg-[#0b1220]/55"
+            className="absolute inset-0 bg-desk/40 backdrop-blur-sm"
           />
 
           <motion.div
@@ -359,12 +359,12 @@ const AdminModal = ({ isOpen, onClose, onSyncSuccess }) => {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
             transition={{ duration: 0.3 }}
-            className="relative w-[95vw] sm:w-full max-w-lg overflow-hidden bg-paper border border-rule shadow-2xl rounded-xl p-5 sm:p-8 z-10 text-left max-h-[88vh] overflow-y-auto"
+            className="relative w-[95vw] sm:w-full max-w-lg overflow-hidden rounded-2xl border border-rule bg-paper text-ink shadow-[0_1px_0_rgba(22,32,51,0.04)] p-5 sm:p-8 z-10 text-left max-h-[88vh] overflow-y-auto"
           >
             <button
               onClick={handleClose}
               disabled={status === 'loading'}
-              className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 p-2 bg-desk hover:bg-desk text-ink-soft hover:text-ink rounded-full transition-colors border border-rule active:scale-95"
+              className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 inline-flex size-9 items-center justify-center rounded-md text-ink-soft hover:bg-muted hover:text-ink"
             >
               <X size={18} />
             </button>
@@ -381,7 +381,7 @@ const AdminModal = ({ isOpen, onClose, onSyncSuccess }) => {
               </div>
 
               {errorMsg && (
-                <div className="flex items-center gap-2 bg-reexam-tint border border-stamp rounded-lg p-3 text-xs text-stamp">
+                <div className="flex items-center gap-2 rounded-lg border border-stamp bg-[color-mix(in_oklab,var(--stamp)_16%,transparent)] p-3 text-xs text-stamp">
                   <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
                   <span>{errorMsg}</span>
                 </div>
@@ -398,7 +398,7 @@ const AdminModal = ({ isOpen, onClose, onSyncSuccess }) => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                   >
-                    <div className="flex flex-col gap-2 p-5 sm:p-6 bg-desk border border-rule rounded-lg text-center items-center justify-center">
+                    <div className="flex flex-col gap-2 p-5 sm:p-6 bg-muted border border-rule rounded-lg text-center items-center justify-center">
                       <div className="p-3 bg-practical-tint rounded-lg text-practical mb-1 border border-practical">
                         <Lock size={20} />
                       </div>
@@ -414,7 +414,7 @@ const AdminModal = ({ isOpen, onClose, onSyncSuccess }) => {
                         onChange={(e) => setPassword(e.target.value)}
                         required
                         autoComplete="current-password"
-                        className="w-full pl-4 pr-10 py-3 rounded-lg bg-desk border border-rule focus:border-practical focus:outline-none text-sm text-ink transition-all min-h-[44px]"
+                        className="h-10 w-full rounded-lg border border-rule bg-transparent pl-4 pr-10 text-base text-ink outline-none placeholder:text-ink-faint focus:border-ink-faint"
                       />
                       <button
                         type="button"
@@ -428,7 +428,7 @@ const AdminModal = ({ isOpen, onClose, onSyncSuccess }) => {
                     <button
                       type="submit"
                       disabled={status === 'loading'}
-                      className="w-full px-4 py-3.5 bg-ink hover:opacity-90 text-paper font-bold rounded-lg transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50 active:scale-95"
+                      className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-ink px-4 text-sm font-semibold text-paper hover:opacity-90 disabled:opacity-50"
                     >
                       {status === 'loading' ? <RefreshCw className="animate-spin" size={16} /> : <ShieldCheck size={16} />}
                       <span>Unlock Dashboard</span>
@@ -438,7 +438,7 @@ const AdminModal = ({ isOpen, onClose, onSyncSuccess }) => {
                   /* 2. LOADING STATE */
                   <motion.div
                     key="loading-indicator"
-                    className="min-h-[220px] flex flex-col items-center justify-center text-center p-6 bg-desk border border-rule rounded-lg"
+                    className="min-h-[220px] flex flex-col items-center justify-center text-center p-6 bg-muted border border-rule rounded-lg"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -482,13 +482,13 @@ const AdminModal = ({ isOpen, onClose, onSyncSuccess }) => {
                     <div className="flex gap-2.5 sm:gap-3 w-full">
                       <button
                         onClick={handleReset}
-                        className="flex-1 px-3 py-2.5 bg-desk hover:bg-desk text-ink font-semibold rounded-xl text-xs transition-all border border-rule"
+                        className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg border border-rule bg-paper px-3 text-sm font-semibold text-ink-soft hover:bg-muted hover:text-ink"
                       >
                         Back
                       </button>
                       <button
                         onClick={handleClose}
-                        className="flex-1 px-3 py-2.5 bg-ink hover:opacity-90 text-paper font-bold rounded-xl text-xs"
+                        className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-ink px-4 text-sm font-semibold text-paper hover:opacity-90"
                       >
                         Finish
                       </button>
@@ -504,11 +504,11 @@ const AdminModal = ({ isOpen, onClose, onSyncSuccess }) => {
                     exit={{ opacity: 0 }}
                   >
                     {/* Navigation Tabs */}
-                    <div className="flex bg-desk p-1 rounded-lg border border-rule">
+                    <div className="flex bg-muted p-1 rounded-lg">
                       <button
                         type="button"
                         onClick={() => { setActiveTab('sheets'); setErrorMsg(''); }}
-                        className={`flex-1 flex items-center justify-center gap-1.5 py-2 sm:py-2.5 px-2 text-[11px] sm:text-xs font-bold rounded-xl transition-all ${ activeTab === 'sheets' ? 'bg-paper text-practical shadow-sm border border-rule' : 'text-ink-soft hover:text-ink' }`}
+                        className={`flex-1 flex items-center justify-center gap-1.5 py-2 sm:py-2.5 px-2 text-[11px] sm:text-xs font-bold rounded-xl transition-all ${ activeTab === 'sheets' ? 'bg-paper text-ink shadow-sm border border-rule' : 'text-ink-soft hover:text-ink' }`}
                       >
                         <LinkIcon size={13} />
                         <span>Google Sheets</span>
@@ -516,7 +516,7 @@ const AdminModal = ({ isOpen, onClose, onSyncSuccess }) => {
                       <button
                         type="button"
                         onClick={() => { setActiveTab('manual'); setErrorMsg(''); }}
-                        className={`flex-1 flex items-center justify-center gap-1.5 py-2 sm:py-2.5 px-2 text-[11px] sm:text-xs font-bold rounded-xl transition-all ${ activeTab === 'manual' ? 'bg-paper text-practical shadow-sm border border-rule' : 'text-ink-soft hover:text-ink' }`}
+                        className={`flex-1 flex items-center justify-center gap-1.5 py-2 sm:py-2.5 px-2 text-[11px] sm:text-xs font-bold rounded-xl transition-all ${ activeTab === 'manual' ? 'bg-paper text-ink shadow-sm border border-rule' : 'text-ink-soft hover:text-ink' }`}
                       >
                         <UploadCloud size={13} />
                         <span>Manual CSV</span>
@@ -524,7 +524,7 @@ const AdminModal = ({ isOpen, onClose, onSyncSuccess }) => {
                     </div>
 
                     {/* Batch Sub-navigation */}
-                    <div className="flex bg-desk p-1 rounded-xl border border-rule items-center justify-between">
+                    <div className="flex bg-muted p-1 rounded-lg items-center justify-between">
                       <span className="text-[10px] font-bold text-ink-soft pl-2">Batch:</span>
                       <div className="flex gap-1">
                         {['2023-27', '2024-28', '2025-29', '2026-30'].map((batch) => (
@@ -555,7 +555,7 @@ const AdminModal = ({ isOpen, onClose, onSyncSuccess }) => {
                                 ...prev,
                                 [selectedBatch]: { ...prev[selectedBatch], mapping: e.target.value }
                               }))}
-                              className="w-full px-3 py-2 rounded-xl bg-desk border border-rule focus:border-practical focus:outline-none text-xs text-ink transition-all min-h-[40px]"
+                              className="h-10 w-full rounded-lg border border-rule bg-transparent px-3 text-base text-ink outline-none placeholder:text-ink-faint focus:border-ink-faint"
                             />
                           </div>
 
@@ -570,7 +570,7 @@ const AdminModal = ({ isOpen, onClose, onSyncSuccess }) => {
                                 ...prev,
                                 [selectedBatch]: { ...prev[selectedBatch], theory: e.target.value }
                               }))}
-                              className="w-full px-3 py-2 rounded-xl bg-desk border border-rule focus:border-practical focus:outline-none text-xs text-ink transition-all min-h-[40px]"
+                              className="h-10 w-full rounded-lg border border-rule bg-transparent px-3 text-base text-ink outline-none placeholder:text-ink-faint focus:border-ink-faint"
                             />
                           </div>
 
@@ -585,12 +585,12 @@ const AdminModal = ({ isOpen, onClose, onSyncSuccess }) => {
                                 ...prev,
                                 [selectedBatch]: { ...prev[selectedBatch], practical: e.target.value }
                               }))}
-                              className="w-full px-3 py-2 rounded-xl bg-desk border border-rule focus:border-practical focus:outline-none text-xs text-ink transition-all min-h-[40px]"
+                              className="h-10 w-full rounded-lg border border-rule bg-transparent px-3 text-base text-ink outline-none placeholder:text-ink-faint focus:border-ink-faint"
                             />
                           </div>
 
                           {/* AI Ingestion Toggle */}
-                          <div className="p-3 bg-desk border border-rule rounded-lg space-y-2">
+                          <div className="p-3 bg-muted border border-rule rounded-lg space-y-2">
                             <div className="flex items-center justify-between">
                               <div className="text-left">
                                 <h4 className="text-xs font-bold text-ink flex items-center gap-1">
@@ -616,7 +616,7 @@ const AdminModal = ({ isOpen, onClose, onSyncSuccess }) => {
                                     placeholder={hasServerApiKey ? "Using server key..." : "gsk_..."}
                                     value={groqApiKey}
                                     onChange={(e) => setGroqApiKey(e.target.value)}
-                                    className="w-full pl-3 pr-9 py-2 rounded-xl bg-desk border border-rule focus:border-practical focus:outline-none text-xs text-ink"
+                                    className="h-10 w-full rounded-lg border border-rule bg-transparent pl-3 pr-9 text-base text-ink outline-none placeholder:text-ink-faint focus:border-ink-faint"
                                   />
                                   <button
                                     type="button"
@@ -635,7 +635,7 @@ const AdminModal = ({ isOpen, onClose, onSyncSuccess }) => {
                           <button
                             type="button"
                             onClick={handleSyncAll}
-                            className="w-full px-4 py-2.5 bg-ink hover:opacity-90 text-paper font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 active:scale-95"
+                            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-ink px-4 text-sm font-semibold text-paper hover:opacity-90"
                           >
                             <Layers size={14} />
                             <span>Sync All Batches</span>
@@ -645,13 +645,13 @@ const AdminModal = ({ isOpen, onClose, onSyncSuccess }) => {
                             <button
                               type="button"
                               onClick={handleLogout}
-                              className="px-3.5 py-2.5 bg-desk hover:bg-desk text-ink font-semibold rounded-xl text-xs transition-all border border-rule active:scale-95"
+                              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-rule bg-paper px-3 text-sm font-semibold text-ink-soft hover:bg-muted hover:text-ink"
                             >
                               Lock
                             </button>
                             <button
                               type="submit"
-                              className="flex-1 px-4 py-2.5 bg-ink hover:opacity-90 text-paper font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 active:scale-95"
+                              className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-ink px-4 text-sm font-semibold text-paper hover:opacity-90"
                             >
                               <RefreshCw size={14} />
                               <span>Fetch & Sync Batch</span>
@@ -672,13 +672,13 @@ const AdminModal = ({ isOpen, onClose, onSyncSuccess }) => {
                           <button
                             type="button"
                             onClick={handleLogout}
-                            className="px-3.5 py-2.5 bg-desk hover:bg-desk text-ink font-semibold rounded-xl text-xs transition-all border border-rule active:scale-95"
+                            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-rule bg-paper px-3 text-sm font-semibold text-ink-soft hover:bg-muted hover:text-ink"
                           >
                             Lock
                           </button>
                           <button
                             type="submit"
-                            className="flex-1 px-4 py-2.5 bg-ink hover:opacity-90 text-paper font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 active:scale-95"
+                            className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-ink px-4 text-sm font-semibold text-paper hover:opacity-90"
                           >
                             <RefreshCw size={14} />
                             <span>Sync CSV Files</span>

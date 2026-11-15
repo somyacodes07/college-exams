@@ -142,7 +142,7 @@ const Search = ({ onSelectStudent, selectedStudent, onLoadingChange }) => {
     return (
         <div className="relative w-full max-w-2xl lg:max-w-3xl z-30">
             {/* One focus indicator: the box itself (the input's own outline is off) */}
-            <div className="flex items-center bg-paper rounded-lg border border-rule transition-colors hover:border-ink-faint focus-within:border-ink! focus-within:ring-2 focus-within:ring-ink/15">
+            <div className="flex h-12 sm:h-14 items-center rounded-lg border border-rule bg-paper transition-[border-color,box-shadow] duration-200 focus-within:border-ink-faint focus-within:ring-2 focus-within:ring-ink-faint/30">
                 <div className="pl-4 lg:pl-5 pr-1 flex-shrink-0 text-ink-faint" aria-hidden="true">
                     {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <SearchIcon className="w-5 h-5" />}
                 </div>
@@ -174,14 +174,14 @@ const Search = ({ onSelectStudent, selectedStudent, onLoadingChange }) => {
                     autoCapitalize="words"
                     spellCheck={false}
                     enterKeyHint="search"
-                    className="tnum w-full bg-transparent text-ink text-[18px] lg:text-[21px] px-2.5 lg:px-3 h-14 lg:h-16 outline-none focus-visible:outline-none placeholder:text-ink-faint [&::-webkit-search-cancel-button]:hidden"
+                    className="tnum h-full w-full bg-transparent px-2.5 text-base text-ink outline-none focus-visible:outline-none placeholder:text-ink-faint sm:px-3 [&::-webkit-search-cancel-button]:hidden"
                 />
 
                 {query && (
                     <button
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={handleClear}
-                        className="mr-1.5 w-11 h-11 flex-shrink-0 inline-flex items-center justify-center rounded-md text-ink-faint hover:text-ink hover:bg-desk transition-colors"
+                        className="mr-1.5 inline-flex size-9 shrink-0 items-center justify-center rounded-md text-ink-soft hover:bg-muted hover:text-ink"
                         aria-label="Clear search"
                     >
                         <X size={18} />
@@ -204,7 +204,7 @@ const Search = ({ onSelectStudent, selectedStudent, onLoadingChange }) => {
                     id="student-suggestions"
                     role="listbox"
                     onMouseDown={(e) => e.preventDefault()}
-                    className="absolute top-full left-0 right-0 mt-1.5 bg-paper border border-rule rounded-lg shadow-[0_12px_32px_-12px_rgba(28,42,71,0.35)] overflow-hidden max-h-[min(55vh,24rem)] overflow-y-auto overscroll-contain"
+                    className="menu-pop absolute top-full left-0 right-0 mt-1.5 max-h-[min(55vh,24rem)] overflow-hidden overflow-y-auto overscroll-contain rounded-lg border border-rule bg-paper shadow-sm"
                 >
                     {showRecent && <p className="px-4 pt-3 pb-1 text-[13px] text-ink-faint">Recently opened</p>}
 
@@ -234,7 +234,7 @@ const Search = ({ onSelectStudent, selectedStudent, onLoadingChange }) => {
                                 key={student.rollNo}
                                 onClick={() => handleSelect(student)}
                                 onMouseEnter={() => setSelectedIndex(idx)}
-                                className={`px-4 py-3 min-h-[56px] cursor-pointer flex items-center justify-between gap-4 border-t first:border-t-0 border-rule ${isSelected ? 'bg-desk' : ''}`}
+                                className={`flex min-h-[56px] cursor-pointer items-center justify-between gap-4 border-t border-rule px-4 py-3 first:border-t-0 ${isSelected ? 'bg-muted' : ''}`}
                             >
                                 <div className="min-w-0 flex-1">
                                     <div className="text-[16px] lg:text-[18px] font-bold text-ink truncate">
@@ -255,7 +255,7 @@ const Search = ({ onSelectStudent, selectedStudent, onLoadingChange }) => {
                                         e.stopPropagation();
                                         copyText(displayRoll(student), `Roll number ${displayRoll(student)} copied`);
                                     }}
-                                    className="flex-shrink-0 inline-flex items-center gap-1.5 h-10 px-3 rounded-md border border-rule bg-paper text-[14px] font-bold text-ink-soft hover:text-ink hover:border-ink-faint active:scale-[0.97] transition"
+                                    className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-rule bg-paper px-3 text-sm font-semibold text-ink-soft hover:bg-muted hover:text-ink"
                                     aria-label={`Copy roll number of ${student.name}`}
                                 >
                                     <Copy size={15} /> Copy

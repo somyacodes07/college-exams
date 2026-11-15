@@ -31,21 +31,21 @@ const QuickCopy = ({ onOpen }) => {
   };
 
   return (
-    <section className="reveal mt-6 lg:mt-8 max-w-2xl lg:max-w-3xl" aria-label="Your roll number">
-      <div className="bg-paper border border-rule rounded-xl p-4 lg:p-5">
+    <section className="reveal mx-auto mt-6 w-full max-w-2xl lg:mt-8 lg:max-w-3xl" aria-label="Your roll number">
+      <div className="rounded-2xl border border-rule bg-paper text-ink shadow-[0_1px_0_rgba(22,32,51,0.04)] p-4 lg:p-5">
         <p className="text-[14px] lg:text-[16px] text-ink-faint">Last opened on this device</p>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
           <button onClick={() => onOpen(mine)} className="min-w-0 text-left rounded-md">
-            <span className="block text-[18px] lg:text-[22px] font-extrabold leading-tight truncate">{mine.name}</span>
+            <span className="block text-base font-semibold tracking-tight truncate">{mine.name}</span>
             <span className="block text-[14px] lg:text-[16px] text-ink-soft underline decoration-rule underline-offset-4 hover:decoration-ink">Open schedule</span>
           </button>
           <button
             onClick={() => copy(mine)}
-            className={`inline-flex items-center gap-3 h-14 lg:h-16 px-4 lg:px-5 rounded-lg border transition-colors ${copied === mine.rollNo ? 'pop border-practical bg-practical-tint' : 'border-ink bg-ink text-paper hover:opacity-90'}`}
+            className={`inline-flex items-center justify-center gap-2 h-10 rounded-lg px-4 text-sm font-semibold ${copied === mine.rollNo ? 'pop border border-practical bg-practical-tint text-ink' : 'bg-ink text-paper hover:opacity-90'}`}
             aria-label={`Copy roll number ${displayRoll(mine)}`}
           >
-            <span className={`tnum text-[22px] lg:text-[28px] font-extrabold tracking-[0.01em] ${copied === mine.rollNo ? 'text-ink' : ''}`}>{displayRoll(mine)}</span>
-            <span className={`inline-flex items-center gap-1 text-[14px] lg:text-[16px] font-bold ${copied === mine.rollNo ? 'text-practical' : ''}`}>
+            <span className={`tnum ${copied === mine.rollNo ? 'text-ink' : ''}`}>{displayRoll(mine)}</span>
+            <span className="inline-flex items-center gap-1">
               {copied === mine.rollNo ? <><Check size={17} strokeWidth={2.5} /> Copied</> : <><Copy size={16} /> Copy</>}
             </span>
           </button>
@@ -69,7 +69,7 @@ const QuickCopy = ({ onOpen }) => {
                   </button>
                   <button
                     onClick={() => setRecent(removeRecent(s.rollNo))}
-                    className="h-10 w-10 inline-flex items-center justify-center rounded-md text-ink-faint hover:text-ink hover:bg-desk"
+                    className="inline-flex size-9 items-center justify-center rounded-md text-ink-soft hover:bg-muted hover:text-ink"
                     aria-label={`Remove ${s.name} from this list`}
                     title="Remove from this list"
                   >

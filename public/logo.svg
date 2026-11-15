@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Exam Scheduler">
   <!-- Ink tile -->
-  <rect width="512" height="512" rx="112" fill="#1c2a47"/>
+  <rect width="512" height="512" rx="112" fill="#0a0a0a"/>
   <!-- A date sheet: the next slot is highlighted, later ones fade -->
-  <rect x="112" y="136" width="288" height="64" rx="10" fill="#f7e463"/>
-  <rect x="112" y="240" width="232" height="44" rx="8" fill="#ffffff"/>
-  <rect x="112" y="324" width="176" height="44" rx="8" fill="#ffffff" fill-opacity="0.45"/>
+  <rect x="112" y="136" width="288" height="64" rx="10" fill="#facc15"/>
+  <rect x="112" y="240" width="232" height="44" rx="8" fill="#fafafa"/>
+  <rect x="112" y="324" width="176" height="44" rx="8" fill="#fafafa" fill-opacity="0.45"/>
 </svg>

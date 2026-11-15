@@ -4,55 +4,57 @@
 @variant dark (&:where(.dark, .dark *));
 
 /*
- * Design: a printed date sheet. Blue-black ballpoint ink on white paper,
- * resting on a cool grey desk. One functional colour, highlighter yellow,
- * marks only the student's next exam; stamp red marks re-exams.
+ * Design: neutral ink on paper. Colour appears only on exam chips
+ * (theory, practical, re-exam) and the next-exam mark.
  */
 :root {
-  --desk: #e9ecf0;
+  --desk: #ffffff;
   --paper: #ffffff;
-  --ink: #1c2a47;
-  --ink-soft: #55607a;
-  --ink-faint: #5f687c;
-  --rule: #d3d9e2;
-  --mark: #f7e463;
-  --mark-ink: #1c2a47;
-  --mark-tint: #fdf7cf;
-  --stamp: #b42318;
-  /* Highlighter set: each exam type has a pen colour (bar/text) and a tint */
-  --theory: #2273b5;
-  --theory-tint: #dcecfb;
-  --practical: #24834a;
-  --practical-tint: #dcf3e3;
-  --reexam: #c0306f;
-  --reexam-tint: #fbe2ee;
+  --muted: #f4f4f4;
+  --ink: #0a0a0a;
+  --ink-soft: #565656;
+  --ink-faint: #565656;
+  --rule: #e3e3e3;
+  --mark: #facc15;
+  --mark-ink: #422006;
+  --mark-tint: #fef8e3;
+  --stamp: #e7000b;
+  --theory: #38bdf8;
+  --theory-tint: #e4f5ff;
+  --practical: #34d399;
+  --practical-tint: #e5f9ee;
+  --reexam: #fb7185;
+  --reexam-tint: #ffe9eb;
   color-scheme: light;
 }
 
 .dark {
-  --desk: #161d2e;
-  --paper: #1f283c;
-  --ink: #eef1f6;
-  --ink-soft: #aab3c4;
-  --ink-faint: #8e99ae;
-  --rule: #33405a;
-  --mark: #e8d44a;
-  --mark-ink: #1c2a47;
-  --mark-tint: #3a3826;
-  --stamp: #f2796a;
-  --theory: #7bbcf2;
-  --theory-tint: #1e3550;
-  --practical: #74d197;
-  --practical-tint: #1b3a2a;
-  --reexam: #f291c0;
-  --reexam-tint: #42223a;
+  --desk: #0a0a0a;
+  --paper: #171717;
+  --muted: #1b1b1b;
+  --ink: #fafafa;
+  --ink-soft: #999999;
+  --ink-faint: #999999;
+  --rule: #252525;
+  --mark: #fde047;
+  --mark-ink: #3f2a04;
+  --mark-tint: #292617;
+  --stamp: #ff6467;
+  --theory: #5ec8ff;
+  --theory-tint: #182329;
+  --practical: #4ade80;
+  --practical-tint: #17261b;
+  --reexam: #fda4af;
+  --reexam-tint: #2a1f20;
   color-scheme: dark;
 }
 
 @theme inline {
-  --font-sans: 'Atkinson Hyperlegible Next', 'Atkinson Hyperlegible', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: Satoshi, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
   --color-desk: var(--desk);
   --color-paper: var(--paper);
+  --color-muted: var(--muted);
   --color-ink: var(--ink);
   --color-ink-soft: var(--ink-soft);
   --color-ink-faint: var(--ink-faint);
@@ -71,6 +73,7 @@
 
 html {
   overflow-x: clip;
+  scroll-behavior: smooth;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -89,12 +92,9 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Desktop has room: everything reads one step larger */
-@media (min-width: 1024px) {
-  body { font-size: 18px; }
-}
-
-/* Times, dates and roll numbers line up in columns */
+/* Times, dates and roll numbers line up in columns.
+   Mono is applied with font-mono on the time column only, so names in
+   the search field stay in the UI face. */
 .tnum {
   font-variant-numeric: tabular-nums lining-nums;
 }
@@ -103,9 +103,43 @@ body {
    replace it with its own focus style (e.g. the search box border). */
 @layer base {
   :focus-visible {
-    outline: 2px solid var(--ink);
+    outline: 2px solid var(--ink-soft);
     outline-offset: 2px;
   }
+}
+
+.chip {
+  border-radius: 8px;
+  padding: 7px 10px 7px 11px;
+  background: color-mix(in oklab, var(--cal) 16%, transparent);
+  box-shadow: inset 3px 0 0 var(--cal);
+}
+.chip-theory { --cal: var(--theory); }
+.chip-practical { --cal: var(--practical); }
+.chip-reexam { --cal: var(--reexam); }
+.chip.is-next {
+  background: var(--mark);
+  color: var(--mark-ink);
+  box-shadow: none;
+}
+/* Child utilities (text-ink, text-ink-soft) would otherwise paint light
+   text on the yellow row in dark mode. */
+.chip.is-next .text-ink,
+.chip.is-next .text-ink-soft,
+.chip.is-next .text-ink-faint {
+  color: var(--mark-ink);
+}
+@media not print {
+  .chip.is-next .highlight {
+    background-image: none;
+    animation: none;
+    color: inherit;
+    padding: 0;
+    margin: 0;
+  }
+}
+@media (max-width: 639px) {
+  .chip { border-radius: 10px; padding: 8px 10px 8px 12px; }
 }
 
 /* Highlighter stroke behind the next exam: the page's one moment of motion */
@@ -130,22 +164,41 @@ body {
 /* Skeleton: the shape of the timetable while it loads */
 .skeleton {
   border-radius: 6px;
-  background: linear-gradient(90deg, var(--desk) 0%, var(--rule) 45%, var(--desk) 90%);
-  background-size: 220% 100%;
-  animation: skeleton-sweep 1.3s ease-in-out infinite;
+  background: var(--muted);
+  animation: skeleton-pulse 1.2s ease-in-out infinite;
 }
-@keyframes skeleton-sweep {
-  from { background-position: 100% 0; }
-  to { background-position: -120% 0; }
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
 }
 
 /* The schedule arrives as one short, staggered reveal (header, then sheets) */
-.reveal {
-  animation: reveal-in 320ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+.reveal,
+.rise {
+  animation: reveal-in 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+.d1 { animation-delay: 70ms; }
+.d2 { animation-delay: 150ms; }
+.d3 { animation-delay: 230ms; }
+.d4 { animation-delay: 310ms; }
+.d5 { animation-delay: 390ms; }
 @keyframes reveal-in {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: none; }
+}
+
+.menu-pop {
+  animation: menu-pop 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: top center;
+}
+@keyframes menu-pop {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Theme switches crossfade instead of snapping */
+body, header, footer, .bg-paper, .bg-desk, .bg-muted {
+  transition: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease;
 }
 
 /* Quick crossfade when switching tabs */
@@ -197,11 +250,30 @@ input, select, textarea, button {
 /* Print / save as PDF: just the student's date sheet, black on white */
 @media print {
   :root, .dark {
-    --desk: #ffffff; --paper: #ffffff; --ink: #000000; --ink-soft: #333333;
-    --ink-faint: #666666; --rule: #bbbbbb; --mark: #fff176;
+    --desk: #ffffff; --paper: #ffffff; --muted: #f4f4f4;
+    --ink: #000000; --ink-soft: #333333; --ink-faint: #666666;
+    --rule: #d4d4d8;
+    --mark: #fff176; --mark-ink: #000000; --mark-tint: #fff176;
+    --stamp: #9f1239;
+    --theory: #0369a1; --theory-tint: #e0f2fe;
+    --practical: #166534; --practical-tint: #dcfce7;
+    --reexam: #9f1239; --reexam-tint: #ffe4e6;
   }
-  body { background: #fff; font-size: 12pt; }
-  .highlight { animation: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { background: #fff; color: #000; font-size: 12pt; }
+  .chip {
+    background: transparent !important;
+    color: #000 !important;
+    box-shadow: inset 3px 0 0 var(--cal) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .highlight {
+    animation: none;
+    background-image: linear-gradient(transparent 12%, #fff176 12%, #fff176 88%, transparent 88%);
+    color: #000;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
   section, li { break-inside: avoid; }
   @page { margin: 14mm; }
 }
