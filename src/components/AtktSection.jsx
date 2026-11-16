@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Check } from 'lucide-react';
 import { parseExamDateTime, isExamCompleted, relativeDayLabel, examDateParts, displayTime } from '../utils/dateUtils';
 import { ROW_GRID, ROW_TYPE, SECTION_TITLE, tabClass, countBadge, segmentClass } from './kind';
 import PrintButton from './PrintButton';
@@ -75,14 +74,11 @@ const Row = ({ exam, kind, isNext, showDate, now }) => {
           <p className={`${ROW_TYPE.subject} ${completed ? 'text-ink-soft' : 'text-ink'}`}>
             {isNext ? <span className="highlight">{exam.subject}</span> : exam.subject}
           </p>
-          {completed && (
-            <span className={`${ROW_TYPE.done} text-ink-soft`}>
-              <Check size={14} strokeWidth={2.5} /> Done
-            </span>
-          )}
         </div>
-        <p className={`${ROW_TYPE.time} text-ink-soft`}>
-          {exam.time ? displayTime(exam.time) : 'Time to be announced'}
+        <p className={`${ROW_TYPE.time} flex flex-wrap items-baseline gap-x-3 text-ink-soft`}>
+          <span>{exam.time ? displayTime(exam.time) : 'Time to be announced'}</span>
+          {/* The date has passed; says nothing about whether the student sat it */}
+          {completed && <span className={`${ROW_TYPE.done} ml-auto text-ink-soft`}>Date passed</span>}
         </p>
         {showType && <p className={`${ROW_TYPE.meta} text-ink-soft`}>{exam.examType}</p>}
         {/* Faculty and room are always shown, so students can see what's still pending */}
@@ -130,7 +126,7 @@ const AtktSection = ({ exams, nextExam, now: nowProp }) => {
           <span className="rounded border border-stamp px-1.5 text-[11px] lg:text-xs font-semibold text-stamp">ATKT</span>
         </div>
         <span className="text-sm text-ink-faint tnum">
-          {upcoming > 0 ? `${upcoming} of ${exams.length} to go` : 'All done'}
+          {upcoming > 0 ? `${upcoming} of ${exams.length} upcoming` : 'All dates passed'}
         </span>
       </div>
 

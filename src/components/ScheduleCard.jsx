@@ -22,7 +22,7 @@ const formatKeyName = (key) => {
     return result.charAt(0).toUpperCase() + result.slice(1);
 };
 
-/** Re-renders every minute so "Done" states and the countdown stay current. */
+/** Re-renders every minute so "Date passed" labels and the countdown stay current. */
 const useNow = () => {
     const [now, setNow] = useState(() => Date.now());
     useEffect(() => {
@@ -74,15 +74,12 @@ const TimetableRow = ({ exam, kind, isNext, showDate, now }) => {
                     <p className={`${ROW_TYPE.subject} ${completed ? 'text-ink-soft' : 'text-ink'}`}>
                         {isNext ? <span className="highlight">{exam.subject}</span> : exam.subject}
                     </p>
-                    {completed && (
-                        <span className={`${ROW_TYPE.done} text-ink-soft`}>
-                            <Check size={14} strokeWidth={2.5} /> Done
-                        </span>
-                    )}
                 </div>
-                <p className={`${ROW_TYPE.time} text-ink-soft`}>
+                <p className={`${ROW_TYPE.time} flex flex-wrap items-baseline gap-x-3 text-ink-soft`}>
                     <span>{exam.time ? displayTime(exam.time) : 'Time to be announced'}</span>
-                    {showLocation && <span className="ml-3 font-semibold text-ink">{exam.location}</span>}
+                    {showLocation && <span className="font-semibold text-ink">{exam.location}</span>}
+                    {/* The date has passed; says nothing about whether the student sat it */}
+                    {completed && <span className={`${ROW_TYPE.done} ml-auto text-ink-soft`}>Date passed</span>}
                 </p>
                 {(panel || hasValue(exam.professor) || extras.length > 0) && (
                     <p className={`mt-0.5 ${ROW_TYPE.meta} text-ink-faint flex flex-wrap gap-x-3`}>
@@ -200,7 +197,7 @@ const ScheduleCard = ({ student }) => {
         if (atktLoading) return null;
         if (!next) {
             const total = hasAtkt ? atktExams.length : allRegular.length;
-            return <span className="text-ink-soft">{total > 0 ? 'All your exams are done.' : 'No exams scheduled yet.'}</span>;
+            return <span className="text-ink-soft">{total > 0 ? 'All your exam dates have passed.' : 'No exams scheduled yet.'}</span>;
         }
         const { weekday, day } = dateParts(next.exam);
         const rel = relativeDayLabel(next.parsed.dayKey, now);
@@ -322,7 +319,7 @@ const ScheduleCard = ({ student }) => {
                                         onChange={(e) => setHideDone(e.target.checked)}
                                         className="w-4 h-4 accent-[var(--ink)]"
                                     />
-                                    Hide finished
+                                    Hide past exams
                                 </label>
                             )}
                             <PrintButton />
@@ -336,7 +333,7 @@ const ScheduleCard = ({ student }) => {
                             note={`${theoryExams.length} ${theoryExams.length === 1 ? 'paper' : 'papers'}`}
                             exams={visible(theoryExams)}
                             nextExam={next?.exam}
-                            emptyText={theoryExams.length ? 'All theory papers are done.' : 'No theory exams scheduled.'}
+                            emptyText={theoryExams.length ? 'All theory exam dates have passed.' : 'No theory exams scheduled.'}
                             now={now}
                             style={{ animationDelay: '60ms' }}
                             className={activeTab === 'practical' ? 'hidden lg:block print:block' : ''}
@@ -347,7 +344,7 @@ const ScheduleCard = ({ student }) => {
                             note={`${practicalExams.length} ${practicalExams.length === 1 ? 'slot' : 'slots'}`}
                             exams={visible(practicalExams)}
                             nextExam={next?.exam}
-                            emptyText={practicalExams.length ? 'All practicals are done.' : 'No practical exams scheduled.'}
+                            emptyText={practicalExams.length ? 'All practical exam dates have passed.' : 'No practical exams scheduled.'}
                             now={now}
                             style={{ animationDelay: '120ms' }}
                             className={activeTab === 'theory' ? 'hidden lg:block print:block' : ''}
