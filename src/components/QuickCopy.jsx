@@ -31,7 +31,7 @@ const QuickCopy = ({ onOpen }) => {
   };
 
   return (
-    <section className="reveal mx-auto mt-6 w-full max-w-2xl lg:mt-8 lg:max-w-3xl" aria-label="Your roll number">
+    <section className="reveal mx-auto mt-6 w-full max-w-2xl text-left lg:mt-8 lg:max-w-3xl" aria-label="Your roll number">
       <div className="rounded-2xl border border-rule bg-paper text-ink shadow-[0_1px_0_rgba(22,32,51,0.04)] p-4 lg:p-5">
         <p className="text-[14px] lg:text-[16px] text-ink-faint">Last opened on this device</p>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">

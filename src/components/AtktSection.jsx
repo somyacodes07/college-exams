@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Check } from 'lucide-react';
 import { parseExamDateTime, isExamCompleted, relativeDayLabel, examDateParts, displayTime } from '../utils/dateUtils';
-import { ROW_GRID } from './kind';
+import { ROW_GRID, ROW_TYPE, SECTION_TITLE, tabClass, countBadge, segmentClass } from './kind';
 import PrintButton from './PrintButton';
 
 const KIND_ORDER = ['Theory', 'Project Eval', 'Practical', 'Viva'];
@@ -62,31 +61,28 @@ const Row = ({ exam, kind, isNext, showDate, now }) => {
 
   return (
     <li className={`${ROW_GRID} ${showDate ? 'pt-3 lg:pt-4 border-t border-rule first:border-t-0' : 'pt-1'} pb-1`}>
-      <div className="tnum leading-tight pt-0.5">
+      <div className="tnum pt-1 leading-tight">
         {showDate && (
           <>
-            <div className={`text-[13px] lg:text-[15px] ${isToday ? 'font-bold text-ink' : 'text-ink-faint'}`}>{parsed ? (isToday ? 'Today' : weekday) : ''}</div>
-            <div className={`text-[16px] lg:text-[19px] font-bold ${completed ? 'text-ink-faint' : 'text-ink'}`}>{day}</div>
+            <div className={isToday ? `${ROW_TYPE.weekday} font-semibold text-ink` : ROW_TYPE.weekday}>{parsed ? (isToday ? 'Today' : weekday) : ''}</div>
+            <div className={`${ROW_TYPE.day} ${completed ? 'text-ink-faint' : 'text-ink'}`}>{day}</div>
           </>
         )}
       </div>
       <div className={`min-w-0 chip chip-reexam${isNext ? ' is-next' : ''}${completed ? ' opacity-55' : ''}`}>
         <div className="flex items-start justify-between gap-3">
-          <p className={`text-[16px] lg:text-[19px] font-bold leading-snug break-words ${completed ? 'text-ink-faint' : 'text-ink'}`}>
+          <p className={`${ROW_TYPE.subject} ${completed ? 'text-ink-soft' : 'text-ink'}`}>
             {isNext ? <span className="highlight">{exam.subject}</span> : exam.subject}
           </p>
-          {completed && (
-            <span className="flex-shrink-0 inline-flex items-center gap-1 text-[13px] lg:text-[15px] text-ink-faint">
-              <Check size={14} strokeWidth={2.5} /> Done
-            </span>
-          )}
         </div>
-        <p className={`tnum mt-0.5 text-[15px] lg:text-[17px] whitespace-nowrap ${completed ? 'text-ink-faint' : 'text-ink-soft'}`}>
-          {exam.time ? displayTime(exam.time) : 'Time to be announced'}
+        <p className={`${ROW_TYPE.time} flex flex-wrap items-baseline gap-x-3 text-ink-soft`}>
+          <span>{exam.time ? displayTime(exam.time) : 'Time to be announced'}</span>
+          {/* The date has passed; says nothing about whether the student sat it */}
+          {completed && <span className={`${ROW_TYPE.done} ml-auto text-ink-soft`}>Date passed</span>}
         </p>
-        {showType && <p className="text-[14px] lg:text-[16px] text-ink-soft">{exam.examType}</p>}
+        {showType && <p className={`${ROW_TYPE.meta} text-ink-soft`}>{exam.examType}</p>}
         {/* Faculty and room are always shown, so students can see what's still pending */}
-        <dl className={`mt-1 grid grid-cols-[auto_1fr] gap-x-3 text-[14px] lg:text-[16px] ${completed ? 'text-ink-faint' : ''}`}>
+        <dl className={`mt-1 grid grid-cols-[auto_1fr] gap-x-3 ${ROW_TYPE.meta}`}>
           <dt className="text-ink-faint">Faculty</dt>
           <dd className={exam.faculty ? (completed ? '' : 'text-ink') : 'text-ink-faint italic'}>{exam.faculty || 'To be announced'}</dd>
           <dt className="text-ink-faint">Room</dt>
@@ -97,8 +93,6 @@ const Row = ({ exam, kind, isNext, showDate, now }) => {
   );
 };
 
-const tabClass = (active) =>
-  `pb-2 px-3 sm:px-4 text-sm whitespace-nowrap ${active ? 'font-medium text-ink' : 'text-ink-faint hover:text-ink'}`;
 
 /** ATKT re-exams, split into the sheet's tabs (semester, then Theory / Project Eval). */
 const AtktSection = ({ exams, nextExam, now: nowProp }) => {
@@ -126,16 +120,18 @@ const AtktSection = ({ exams, nextExam, now: nowProp }) => {
     <section aria-label="ATKT re-exam schedule" className="reveal rounded-2xl border border-rule bg-paper text-ink shadow-[0_1px_0_rgba(22,32,51,0.04)] px-4 sm:px-5 lg:px-6 pt-4 lg:pt-5 pb-2 print:border-0 print:px-0" style={{ animationDelay: '60ms' }}>
       <div className="flex items-center justify-between gap-3 pb-3 border-b border-rule">
         <div className="flex items-center gap-2.5">
-          <h3 className="font-mono text-[11px] font-medium uppercase tracking-[0.22em] text-ink-soft">Re-exams</h3>
-          <span className="rounded border border-stamp px-1.5 text-[11px] font-medium text-stamp">ATKT</span>
+          <h3 className={`${SECTION_TITLE} inline-flex items-center gap-2`}>
+            <span className="size-2.5 rounded-full bg-reexam" aria-hidden="true" />Re-exams
+          </h3>
+          <span className="rounded border border-stamp px-1.5 text-[11px] lg:text-xs font-semibold text-stamp">ATKT</span>
         </div>
-        <span className="text-[14px] lg:text-[15px] text-ink-faint tnum">
-          {upcoming > 0 ? `${upcoming} of ${exams.length} to go` : 'All done'}
+        <span className="text-sm text-ink-faint tnum">
+          {upcoming > 0 ? `${upcoming} of ${exams.length} upcoming` : 'All dates passed'}
         </span>
       </div>
 
       {/* Semester tabs, with Print at the end of the row */}
-      <div className="flex items-end gap-2 border-b border-rule">
+      <div className="flex items-center gap-2 border-b border-rule">
       {groups.length > 1 ? (
         <div
           className={`flex min-w-0 flex-1 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${groups.length > 3 ? 'max-sm:[mask-image:linear-gradient(to_right,black_82%,transparent)]' : ''}`}
@@ -153,15 +149,15 @@ const AtktSection = ({ exams, nextExam, now: nowProp }) => {
                 onClick={() => setPicked({ semester: g.semester, kind: kindGroup.kind })}
                 className={tabClass(g.semester === semGroup.semester)}
               >
-                {g.semester}<span className={`ml-1.5 inline-block min-w-[1.5rem] rounded px-1.5 py-0.5 text-[11px] font-medium tnum text-center ${g.semester === semGroup.semester ? 'bg-reexam-tint text-ink' : 'bg-muted text-ink-faint'}`}>{count}</span>
+                {g.semester}<span className={`${countBadge} ${g.semester === semGroup.semester ? 'bg-reexam-tint text-ink' : 'bg-muted text-ink-faint'}`}>{count}</span>
               </button>
             );
           })}
         </div>
       ) : (
-        <p className="flex-1 h-11 lg:h-12 flex items-center text-[15px] lg:text-[16px] font-bold">{semGroup.semester}</p>
+        <p className="flex-1 h-10 lg:h-11 flex items-center text-sm lg:text-[15px] font-semibold">{semGroup.semester}</p>
       )}
-        <div className="flex-shrink-0 mb-1"><PrintButton /></div>
+        <div className="flex-shrink-0"><PrintButton /></div>
       </div>
 
       {semGroup.kinds.length > 1 ? (
@@ -174,15 +170,15 @@ const AtktSection = ({ exams, nextExam, now: nowProp }) => {
                 role="tab"
                 aria-selected={active}
                 onClick={() => setPicked({ semester: semGroup.semester, kind: k.kind })}
-                className={`h-9 lg:h-10 px-3 lg:px-4 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${active ? 'bg-paper text-ink' : 'text-ink-soft hover:text-ink'}`}
+                className={segmentClass(active)}
               >
-                {k.kind}<span className={`ml-1.5 inline-block min-w-[1.5rem] rounded px-1.5 py-0.5 text-[11px] font-medium tnum text-center ${active ? 'bg-muted text-ink' : 'bg-paper text-ink-faint'}`}>{k.items.length}</span>
+                {k.kind}<span className={`${countBadge} ${active ? 'bg-reexam-tint text-ink' : 'bg-raised text-ink-faint'}`}>{k.items.length}</span>
               </button>
             );
           })}
         </div>
       ) : (
-        <p className="mt-3 text-[15px] lg:text-[17px] font-bold text-ink-soft">{kindGroup.kind}</p>
+        <p className="mt-3 text-sm lg:text-[15px] font-semibold text-ink-soft">{kindGroup.kind}</p>
       )}
 
       <ol key={`${semGroup.semester}-${kindGroup.kind}`} className="swap mt-1">
