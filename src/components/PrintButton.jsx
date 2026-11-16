@@ -5,7 +5,7 @@ import { Printer } from 'lucide-react';
 const PrintButton = () => (
   <button
     onClick={() => window.print()}
-    className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-rule bg-paper px-3 text-sm font-semibold text-ink-soft hover:bg-muted hover:text-ink print:hidden"
+    className="inline-flex size-9 sm:w-auto sm:px-2.5 items-center justify-center gap-1.5 rounded-md text-sm font-medium text-ink-soft transition-colors hover:bg-muted hover:text-ink print:hidden"
     title="Print or save as PDF"
     aria-label="Print or save as PDF"
   >

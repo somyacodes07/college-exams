@@ -204,7 +204,7 @@ const Search = ({ onSelectStudent, selectedStudent, onLoadingChange }) => {
                     id="student-suggestions"
                     role="listbox"
                     onMouseDown={(e) => e.preventDefault()}
-                    className="menu-pop absolute top-full left-0 right-0 mt-1.5 max-h-[min(55vh,24rem)] overflow-hidden overflow-y-auto overscroll-contain rounded-lg border border-rule bg-paper shadow-sm"
+                    className="menu-pop absolute top-full left-0 right-0 mt-1.5 max-h-[min(55vh,24rem)] overflow-hidden overflow-y-auto overscroll-contain rounded-lg border border-rule bg-paper text-left shadow-[0_12px_32px_-12px_rgba(0,0,0,0.35)]"
                 >
                     {showRecent && <p className="px-4 pt-3 pb-1 text-[13px] text-ink-faint">Recently opened</p>}
 

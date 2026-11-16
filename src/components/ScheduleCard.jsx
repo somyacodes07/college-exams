@@ -10,7 +10,7 @@ import tutVideo from '../assets/tut.mp4';
 import AtktSection from './AtktSection';
 import { SheetSkeleton } from './ScheduleSkeleton';
 import { useAtkt } from '../hooks/useAtkt';
-import { KIND, ROW_GRID } from './kind';
+import { KIND, ROW_GRID, ROW_TYPE, SECTION_TITLE, tabClass, countBadge } from './kind';
 import PrintButton from './PrintButton';
 
 const STANDARD_FIELDS = ['date', 'subject', 'time', 'location', 'type', 'panel', 'professor', '_id', '__v', 'id'];
@@ -61,31 +61,31 @@ const TimetableRow = ({ exam, kind, isNext, showDate, now }) => {
 
     return (
         <li className={`${ROW_GRID} ${showDate ? 'pt-3 lg:pt-4 border-t border-rule first:border-t-0' : 'pt-1'} pb-1`}>
-            <div className="tnum pt-0.5 font-mono text-xs leading-tight text-ink-soft">
+            <div className="tnum pt-1 leading-tight">
                 {showDate && (
                     <>
-                        <div className={isToday ? 'font-semibold text-ink' : undefined}>{isToday ? 'Today' : weekday}</div>
-                        <div className={completed ? 'text-ink-faint' : isToday ? 'font-semibold text-ink' : undefined}>{day}</div>
+                        <div className={isToday ? `${ROW_TYPE.weekday} font-semibold text-ink` : ROW_TYPE.weekday}>{isToday ? 'Today' : weekday}</div>
+                        <div className={`${ROW_TYPE.day} ${completed ? 'text-ink-faint' : 'text-ink'}`}>{day}</div>
                     </>
                 )}
             </div>
             <div className={`chip min-w-0 ${kind === 'practical' ? 'chip-practical' : 'chip-theory'} ${isNext ? 'is-next' : ''} ${completed ? 'opacity-55' : ''}`}>
                 <div className="flex items-start justify-between gap-3">
-                    <p className={`text-sm font-medium tracking-tight leading-snug break-words ${completed ? 'text-ink-soft' : 'text-ink'}`}>
+                    <p className={`${ROW_TYPE.subject} ${completed ? 'text-ink-soft' : 'text-ink'}`}>
                         {isNext ? <span className="highlight">{exam.subject}</span> : exam.subject}
                     </p>
                     {completed && (
-                        <span className="flex-shrink-0 inline-flex items-center gap-1 text-[13px] lg:text-[15px] text-ink-soft">
+                        <span className={`${ROW_TYPE.done} text-ink-soft`}>
                             <Check size={14} strokeWidth={2.5} /> Done
                         </span>
                     )}
                 </div>
-                <p className="tnum mt-0.5 text-[15px] lg:text-[17px] text-ink-soft">
-                    <span className="whitespace-nowrap">{exam.time ? displayTime(exam.time) : 'Time to be announced'}</span>
+                <p className={`${ROW_TYPE.time} text-ink-soft`}>
+                    <span>{exam.time ? displayTime(exam.time) : 'Time to be announced'}</span>
                     {showLocation && <span className="ml-3 font-semibold text-ink">{exam.location}</span>}
                 </p>
                 {(panel || hasValue(exam.professor) || extras.length > 0) && (
-                    <p className="mt-0.5 text-[14px] lg:text-[15px] text-ink-faint flex flex-wrap gap-x-3">
+                    <p className={`mt-0.5 ${ROW_TYPE.meta} text-ink-faint flex flex-wrap gap-x-3`}>
                         {panel && <span>{panel}</span>}
                         {hasValue(exam.professor) && <span>{exam.professor}</span>}
                         {extras.map((key) => <span key={key} className="tnum">{formatKeyName(key)} {exam[key]}</span>)}
@@ -101,11 +101,13 @@ const dayKeyOf = (exam) => dateParts(exam).parsed?.dayKey || `raw-${exam.date}`;
 const Sheet = ({ title, kind, note, exams, nextExam, emptyText, now, className = '', style }) => (
     <section style={style} className={`reveal rounded-2xl border border-rule bg-paper text-ink shadow-[0_1px_0_rgba(22,32,51,0.04)] px-4 sm:px-5 lg:px-6 pt-4 lg:pt-5 pb-2 print:border-0 print:px-0 ${className}`}>
         <div className="flex items-baseline justify-between gap-3 border-b border-rule pb-3">
-            <h3 className="font-mono text-[11px] font-medium uppercase tracking-[0.22em] text-ink-soft">{title}</h3>
-            <span className="text-[14px] lg:text-[15px] text-ink-faint tnum">{note}</span>
+            <h3 className={`${SECTION_TITLE} inline-flex items-center gap-2`}>
+                <span className={`size-2.5 rounded-full ${KIND[kind].dot}`} aria-hidden="true" />{title}
+            </h3>
+            <span className="text-sm text-ink-faint tnum">{note}</span>
         </div>
         {exams.length === 0 ? (
-            <p className="py-6 text-[15px] lg:text-[17px] text-ink-soft">{emptyText}</p>
+            <p className="py-6 text-sm lg:text-base text-ink-soft">{emptyText}</p>
         ) : (
             <ol className="pt-1">
                 {exams.map((exam, idx) => {
@@ -124,7 +126,6 @@ const TABS = [
     { id: 'practical', label: 'Practical', kind: 'practical' },
 ];
 
-const badge = 'ml-1.5 tnum rounded px-1.5 py-0.5 text-[11px] font-medium';
 
 const ScheduleCard = ({ student }) => {
     const now = useNow();
@@ -225,7 +226,7 @@ const ScheduleCard = ({ student }) => {
             <section className="reveal rounded-2xl border border-rule bg-paper p-4 text-ink shadow-[0_1px_0_rgba(22,32,51,0.04)] sm:p-6 lg:p-8 print:border-0 print:p-0" aria-label={`Schedule for ${student.name}`}>
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
-                        <h2 className="break-words text-2xl font-medium tracking-tight sm:text-3xl">
+                        <h2 className="break-words text-2xl font-semibold tracking-tight sm:text-3xl lg:text-4xl">
                             {student.name}
                         </h2>
                         <div className="mt-3 lg:mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
@@ -305,16 +306,16 @@ const ScheduleCard = ({ student }) => {
                                         role="tab"
                                         aria-selected={active}
                                         onClick={() => setActiveTab(t.id)}
-                                        className={`whitespace-nowrap pb-2 text-sm ${active ? 'font-medium text-ink' : 'text-ink-faint hover:text-ink'}`}
+                                        className={tabClass(active)}
                                     >
-                                        {t.label}<span className={`${badge} ${active ? activeBadge : 'bg-muted text-ink-faint'}`}>{count}</span>
+                                        {t.label}<span className={`${countBadge} ${active ? activeBadge : 'bg-muted text-ink-faint'}`}>{count}</span>
                                     </button>
                                 );
                             })}
                         </div>
-                        <div className="ml-auto mb-1 lg:mb-0 flex items-center gap-1">
+                        <div className="ml-auto flex items-center gap-1 self-center">
                             {canHideDone && (
-                                <label className="inline-flex items-center gap-2 h-9 px-2 text-[14px] lg:text-[15px] text-ink-soft cursor-pointer select-none whitespace-nowrap">
+                                <label className="inline-flex items-center gap-2 h-9 px-2 text-sm lg:text-[15px] text-ink-soft cursor-pointer select-none whitespace-nowrap">
                                     <input
                                         type="checkbox"
                                         checked={hideDone}

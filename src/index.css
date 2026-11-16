@@ -11,9 +11,10 @@
   --desk: #ffffff;
   --paper: #ffffff;
   --muted: #f4f4f4;
+  --raised: #ffffff;
   --ink: #0a0a0a;
-  --ink-soft: #565656;
-  --ink-faint: #565656;
+  --ink-soft: #525252;
+  --ink-faint: #6b6b6b;
   --rule: #e3e3e3;
   --mark: #facc15;
   --mark-ink: #422006;
@@ -31,11 +32,12 @@
 .dark {
   --desk: #0a0a0a;
   --paper: #171717;
-  --muted: #1b1b1b;
+  --muted: #232323;
+  --raised: #2e2e2e;
   --ink: #fafafa;
-  --ink-soft: #999999;
-  --ink-faint: #999999;
-  --rule: #252525;
+  --ink-soft: #a6a6a6;
+  --ink-faint: #8f8f8f;
+  --rule: #2c2c2c;
   --mark: #fde047;
   --mark-ink: #3f2a04;
   --mark-tint: #292617;
@@ -55,6 +57,7 @@
   --color-desk: var(--desk);
   --color-paper: var(--paper);
   --color-muted: var(--muted);
+  --color-raised: var(--raised);
   --color-ink: var(--ink);
   --color-ink-soft: var(--ink-soft);
   --color-ink-faint: var(--ink-faint);
@@ -197,7 +200,7 @@ body {
 }
 
 /* Theme switches crossfade instead of snapping */
-body, header, footer, .bg-paper, .bg-desk, .bg-muted {
+body, header, footer, .bg-paper, .bg-desk, .bg-muted, .bg-raised {
   transition: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease;
 }
 

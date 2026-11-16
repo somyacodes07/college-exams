@@ -130,18 +130,32 @@ function App() {
   const toggleTheme = () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
 
   const iconBtn = 'inline-flex size-9 items-center justify-center rounded-md text-ink-soft transition duration-200 hover:bg-muted hover:text-ink active:scale-95';
-  const home = !selectedStudent;
+  // While a schedule is opening, show the schedule layout (skeleton), not the home page
+  const home = !selectedStudent && !opening;
 
   return (
     <div className="relative flex min-h-screen min-h-dvh flex-col bg-desk text-ink">
-      {theme === 'dark' && (
-        <div className="pointer-events-none fixed inset-0 z-0 print:hidden" aria-hidden="true">
+      {/* Home-page backdrop in both themes. Only on the home page (it would
+          otherwise peek between the schedule cards), at 1x resolution so it
+          stays smooth on phones, and faded out behind the headline and search. */}
+      {home && (
+        <div
+          key={theme}
+          className="pointer-events-none fixed inset-0 z-0 print:hidden"
+          aria-hidden="true"
+        >
           <GradientASCII
-            colors={['#1e3fd8', '#f6f8ff', '#a5d8ff', '#38bdf8']}
+            colors={theme === 'dark'
+              ? ['#1e3fd8', '#f6f8ff', '#a5d8ff', '#38bdf8']
+              : ['#bfdbfe', '#1e3fd8', '#38bdf8', '#0b1a4a']}
+            lightMode={theme !== 'dark'}
             shape="horizon"
             characters=" =+xX0S8#@"
             cellSize={18}
             density={0.8}
+            glyphOpacity={theme === 'dark' ? 0.85 : 0.55}
+            gradientOpacity={theme === 'dark' ? 0.9 : 0.5}
+            dpr={1}
             style={{ width: '100%', height: '100%' }}
           />
         </div>
@@ -156,7 +170,7 @@ function App() {
             className="flex items-center gap-2.5 min-w-0 rounded-md"
             aria-label="Exam Scheduler home"
           >
-            <img src="/logo.svg" alt="" width="28" height="28" className="w-7 h-7 lg:w-8 lg:h-8 rounded-[7px] flex-shrink-0 dark:ring-1 dark:ring-rule" />
+            <img src="/logo.svg" alt="" width="28" height="28" className="w-7 h-7 lg:w-8 lg:h-8 rounded-[7px] flex-shrink-0 dark:ring-1 dark:ring-white/15" />
             <span className="font-semibold text-sm tracking-tight truncate">Exam Scheduler</span>
           </button>
 
@@ -187,7 +201,12 @@ function App() {
           : 'relative z-10 mx-auto w-full max-w-6xl flex-1 px-4 pt-8 sm:pt-14 lg:px-6 lg:pt-16'}
       >
         {home && (
-          <div className="rise flex w-full max-w-xl flex-col items-center">
+          <div className="rise relative flex w-full max-w-xl flex-col items-center">
+            {/* Soft fade behind the headline so the backdrop never fights the text */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -inset-x-16 -inset-y-14 -z-10 bg-[radial-gradient(closest-side,var(--desk)_55%,transparent)] sm:-inset-x-24"
+            />
             <h1 className="text-4xl font-medium tracking-tight leading-[1.05] sm:text-5xl">
               Your exam date sheet
             </h1>
