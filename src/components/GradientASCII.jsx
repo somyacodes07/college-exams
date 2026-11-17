@@ -254,7 +254,10 @@ vec4 glyphAt(vec2 px) {
   // mixing it with white, so glyphs stay saturated on a light page.
   vec3 hue = field.rgb / max(field.a, 0.001);
   vec3 ink = clamp(hue * 0.82, 0.0, 1.0);
-  return vec4(ink * alpha, alpha);
+  // Fade glyphs out where the gradient fades (as dark mode does), so the
+  // horizon ends cleanly above the page content instead of running into it.
+  float fade = smoothstep(0.16, 0.65, field.a);
+  return vec4(ink * alpha * fade, alpha * fade);
 }
 `;
 

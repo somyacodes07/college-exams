@@ -203,13 +203,6 @@ function App() {
       >
         {home && (
           <div className="rise relative flex w-full max-w-xl flex-col items-center">
-            {/* Soft fade behind the headline so the backdrop never fights the text */}
-            <div
-              aria-hidden="true"
-              className={`pointer-events-none absolute -inset-x-8 -inset-y-8 -z-10 sm:-inset-x-12 ${theme === 'dark'
-                ? 'bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--desk)_78%,transparent)_45%,transparent)]'
-                : 'bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--desk)_92%,transparent)_55%,transparent)]'}`}
-            />
             <h1 className="text-4xl font-medium tracking-tight leading-[1.05] sm:text-5xl">
               Your exam date sheet
             </h1>
