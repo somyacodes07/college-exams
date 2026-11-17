@@ -136,8 +136,8 @@ function App() {
   return (
     <div className="relative flex min-h-screen min-h-dvh flex-col bg-desk text-ink">
       {/* Home-page backdrop in both themes. Only on the home page (it would
-          otherwise peek between the schedule cards), at 1x resolution so it
-          stays smooth on phones, and faded out behind the headline and search. */}
+          otherwise peek between the schedule cards). Renders at the screen's
+          pixel density (capped at 2x by the component) so glyphs stay crisp. */}
       {home && (
         <div
           key={theme}
@@ -147,15 +147,16 @@ function App() {
           <GradientASCII
             colors={theme === 'dark'
               ? ['#1e3fd8', '#f6f8ff', '#a5d8ff', '#38bdf8']
-              : ['#bfdbfe', '#1e3fd8', '#38bdf8', '#0b1a4a']}
+              // Light mode draws darker colours as denser glyphs: saturated blues read vivid on white
+              : ['#3b82f6', '#2563eb', '#0ea5e9', '#7dd3fc']}
             lightMode={theme !== 'dark'}
             shape="horizon"
             characters=" =+xX0S8#@"
             cellSize={18}
             density={0.8}
-            glyphOpacity={theme === 'dark' ? 0.85 : 0.55}
-            gradientOpacity={theme === 'dark' ? 0.9 : 0.5}
-            dpr={1}
+            glyphOpacity={theme === 'dark' ? 0.85 : 0.7}
+            gradientOpacity={theme === 'dark' ? 0.9 : 0.6}
+            glow={theme === 'dark' ? 0.2 : 0.3}
             style={{ width: '100%', height: '100%' }}
           />
         </div>
@@ -205,7 +206,9 @@ function App() {
             {/* Soft fade behind the headline so the backdrop never fights the text */}
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute -inset-x-16 -inset-y-14 -z-10 bg-[radial-gradient(closest-side,var(--desk)_55%,transparent)] sm:-inset-x-24"
+              className={`pointer-events-none absolute -inset-x-8 -inset-y-8 -z-10 sm:-inset-x-12 ${theme === 'dark'
+                ? 'bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--desk)_78%,transparent)_45%,transparent)]'
+                : 'bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--desk)_92%,transparent)_55%,transparent)]'}`}
             />
             <h1 className="text-4xl font-medium tracking-tight leading-[1.05] sm:text-5xl">
               Your exam date sheet

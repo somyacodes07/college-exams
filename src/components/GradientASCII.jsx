@@ -250,7 +250,10 @@ vec4 glyphAt(vec2 px) {
     vec3 light = field.rgb * 0.55 + vec3(0.03) * field.a;
     return vec4(light * alpha, 0.6 * field.a * alpha);
   }
-  vec3 ink = visible * 0.8;
+  // Light mode: use the gradient's own hue (un-premultiplied) instead of
+  // mixing it with white, so glyphs stay saturated on a light page.
+  vec3 hue = field.rgb / max(field.a, 0.001);
+  vec3 ink = clamp(hue * 0.82, 0.0, 1.0);
   return vec4(ink * alpha, alpha);
 }
 `;
