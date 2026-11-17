@@ -179,6 +179,13 @@ console.log('✅ PASS: Secret scanning test passed (Zero hardcoded secrets found
   const named = parseTab(sample, 'PE(Sem5)2024-28');
   assert.ok(named.every((r) => r.semester === 'Sem 5' && r.kind === 'Project Eval' && r.group === 'Sem 5 · Project Eval'), 'Tab name overrides the title row');
   assert.ok(parseTab(sample, 'Sheet1').every((r) => r.group === 'Sheet1'), 'Unknown tab names are used as-is');
+  // Room spellings from the sheet are normalised to one form
+  const roomOf = (v) => parseTab(`Subject,Roll No.,Classroom no.\nX,100000000001,${v}`, 'TH(Sem1)2025-29')[0].classroom;
+  assert.strictEqual(roomOf('Classroom no. 39'), 'Classroom 39');
+  assert.strictEqual(roomOf('Clasrrom no. 39'), 'Classroom 39');
+  assert.strictEqual(roomOf('Classroom 39'), 'Classroom 39');
+  assert.strictEqual(roomOf('B.Tech Lounge'), 'B.Tech Lounge');
+  assert.strictEqual(roomOf('cr- 37'), 'CR-37');
   console.log(`✅ PASS: ATKT sheet parsing tests passed (${rows.length} entries, tab grouping)`);
 
   console.log('\n🎉 ALL CI/CD TESTS PASSED SUCCESSFULLY!');

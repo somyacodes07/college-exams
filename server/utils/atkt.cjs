@@ -141,9 +141,13 @@ function tidyPerson(v) {
 /** Normalises "cr- 37" -> "CR-37", "lab 3" -> "Lab 3". */
 function tidyRoom(v) {
   return clean(v)
+    // "Classroom no. 39", "Clasrrom no. 39", "Class room 39" -> "Classroom 39"
+    .replace(/^cla?s+\s*r+o+m\s*(?:no\.?|number|#)?\s*[-:.]?\s*(?=\w)/i, 'Classroom ')
     .replace(/^cr\b\s*[-.:]?\s*/i, 'CR-')
     .replace(/^lab\b/i, 'Lab')
-    .replace(/^room\b/i, 'Room');
+    .replace(/^room\b\s*(?:no\.?|number|#)?\s*[-:.]?\s*/i, 'Room ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /**
